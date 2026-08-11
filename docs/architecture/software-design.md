@@ -102,10 +102,11 @@ It does not import SwiftUI, Speech, Translation, AVFoundation, or AppKit.
 
 ### LocalSubCLI
 
-Used for repeatable spikes, fixtures, batch comparison, and dogfooding. It calls the same
-application service as the GUI and has no privileged bypass. It can use an already-installed
+Distributed publicly as a source-built command-line interface and also used for repeatable
+fixtures, batch comparison, and dogfooding. It calls the same application service as the GUI and
+has no privileged bypass. It can use an already-installed
 Translation model but cannot request first-use model-download consent. Missing assets are a
-typed, noninteractive failure that directs the developer to prepare them in the GUI.
+typed, noninteractive failure that directs the user to prepare them in the GUI.
 
 ### LocalSubApp
 
