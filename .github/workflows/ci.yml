@@ -26,5 +26,7 @@ jobs:
           xcodebuild -version
       - name: Test
         run: swift test --scratch-path /tmp/localsub-ci-tests
+      - name: Test CLI distribution scripts
+        run: ./scripts/test-cli-distribution.sh
       - name: Build app bundle
         run: ./scripts/build-app.sh release

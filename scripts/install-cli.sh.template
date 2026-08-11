@@ -1,0 +1,99 @@
+#!/bin/sh
+set -eu
+
+version="__LOCALSUB_VERSION__"
+expected_team_id="__LOCALSUB_TEAM_ID__"
+asset="localsub-v${version}-darwin-arm64.zip"
+default_base_url="https://github.com/byteflare-co/localsub/releases/download/v${version}"
+release_base_url=${LOCALSUB_RELEASE_BASE_URL:-$default_base_url}
+install_dir=${LOCALSUB_INSTALL_DIR:-"${HOME}/.local/bin"}
+
+fail() {
+  printf 'localsub installer: %s\n' "$1" >&2
+  exit 1
+}
+
+[ "$(uname -s)" = "Darwin" ] || fail "macOS is required"
+[ "$(uname -m)" = "arm64" ] || fail "Apple Silicon (arm64) is required"
+
+macos_major=$(sw_vers -productVersion | /usr/bin/awk -F. '{ print $1 }')
+case "$macos_major" in
+  ''|*[!0-9]*) fail "could not determine the macOS version" ;;
+esac
+[ "$macos_major" -ge 26 ] || fail "macOS 26 or later is required"
+
+case "$install_dir" in
+  /*) ;;
+  *) fail "LOCALSUB_INSTALL_DIR must be an absolute path" ;;
+esac
+[ "$install_dir" != "/" ] || fail "refusing to install into /"
+[ ! -L "$install_dir" ] || fail "install directory must not be a symlink"
+
+working_dir=$(/usr/bin/mktemp -d /tmp/localsub-install.XXXXXX)
+staged_binary=""
+cleanup() {
+  [ -z "$staged_binary" ] || /bin/rm -f "$staged_binary"
+  /bin/rm -rf "$working_dir"
+}
+trap cleanup EXIT HUP INT TERM
+
+/usr/bin/curl -fsSL --connect-timeout 15 --max-time 300 --max-filesize 52428800 \
+  "${release_base_url}/${asset}" -o "${working_dir}/${asset}"
+/usr/bin/curl -fsSL --connect-timeout 15 --max-time 60 --max-filesize 65536 \
+  "${release_base_url}/SHA256SUMS" -o "${working_dir}/SHA256SUMS"
+
+expected_sha=$(/usr/bin/awk -v file="$asset" '$2 == file { print $1 }' "${working_dir}/SHA256SUMS")
+/usr/bin/awk -v file="$asset" '$2 == file { count += 1 } END { exit count == 1 ? 0 : 1 }' \
+  "${working_dir}/SHA256SUMS" || fail "release checksum must contain exactly one archive entry"
+/usr/bin/printf '%s\n' "$expected_sha" | /usr/bin/grep -Eq '^[0-9a-f]{64}$' \
+  || fail "release checksum is missing or malformed"
+actual_sha=$(/usr/bin/shasum -a 256 "${working_dir}/${asset}" | /usr/bin/awk '{ print $1 }')
+[ "$actual_sha" = "$expected_sha" ] || fail "release checksum verification failed"
+
+package_dir="${working_dir}/unpacked/localsub-v${version}-darwin-arm64"
+archive_root="localsub-v${version}-darwin-arm64"
+archive_entries=$(/usr/bin/unzip -Z1 "${working_dir}/${asset}")
+entry_count=$(/usr/bin/printf '%s\n' "$archive_entries" | /usr/bin/awk 'NF { count += 1 } END { print count + 0 }')
+[ "$entry_count" -eq 4 ] || fail "archive contains unexpected entries"
+for required_entry in \
+  "${archive_root}/" \
+  "${archive_root}/localsub" \
+  "${archive_root}/LICENSE" \
+  "${archive_root}/NOTICE"
+do
+  /usr/bin/printf '%s\n' "$archive_entries" | /usr/bin/grep -Fqx "$required_entry" \
+    || fail "archive is missing ${required_entry}"
+done
+/usr/bin/unzip -q "$working_dir/$asset" -d "$working_dir/unpacked"
+downloaded_binary="${package_dir}/localsub"
+[ -f "$downloaded_binary" ] || fail "archive does not contain the localsub executable"
+[ ! -L "$downloaded_binary" ] || fail "archive executable must not be a symlink"
+[ -x "$downloaded_binary" ] || fail "archive executable is not executable"
+
+/usr/bin/codesign --verify --strict --verbose=2 "$downloaded_binary" >/dev/null 2>&1 \
+  || fail "Apple code-signature verification failed"
+actual_team_id=$(/usr/bin/codesign -dv --verbose=4 "$downloaded_binary" 2>&1 \
+  | /usr/bin/sed -n 's/^TeamIdentifier=//p')
+[ "$actual_team_id" = "$expected_team_id" ] || fail "unexpected Apple Developer Team Identifier"
+actual_identifier=$(/usr/bin/codesign -dv --verbose=4 "$downloaded_binary" 2>&1 \
+  | /usr/bin/sed -n 's/^Identifier=//p')
+[ "$actual_identifier" = "localsub" ] || fail "unexpected Apple code-signing identifier"
+/usr/sbin/spctl --assess --type execute --verbose=2 "$downloaded_binary" >/dev/null 2>&1 \
+  || fail "Apple notarization assessment failed"
+
+/bin/mkdir -p "$install_dir"
+destination="${install_dir}/localsub"
+[ ! -L "$destination" ] || fail "refusing to replace a symbolic link at ${destination}"
+staged_binary=$(/usr/bin/mktemp "${install_dir}/.localsub.XXXXXX")
+/usr/bin/install -m 0755 "$downloaded_binary" "$staged_binary"
+/bin/mv -f "$staged_binary" "$destination"
+staged_binary=""
+
+installed_version=$($destination --version 2>/dev/null || true)
+[ "$installed_version" = "localsub ${version}" ] || fail "installed binary failed its version check"
+
+printf 'Installed localsub %s to %s\n' "$version" "$destination"
+case ":${PATH}:" in
+  *":${install_dir}:"*) ;;
+  *) printf 'Add %s to PATH, then run: localsub doctor\n' "$install_dir" ;;
+esac

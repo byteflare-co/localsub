@@ -1,0 +1,19 @@
+cask "localsub" do
+  version "__LOCALSUB_VERSION__"
+  sha256 "__LOCALSUB_ARCHIVE_SHA256__"
+
+  url "https://github.com/byteflare-co/localsub/releases/download/v#{version}/localsub-v#{version}-darwin-arm64.zip"
+  name "LocalSub CLI"
+  desc "Generate Japanese subtitles and captioned videos locally"
+  homepage "https://github.com/byteflare-co/localsub"
+
+  depends_on arch: :arm64
+  depends_on macos: :tahoe
+
+  binary "localsub-v#{version}-darwin-arm64/localsub"
+
+  caveats <<~EOS
+    Run `localsub doctor` before processing the first video.
+    Apple Speech and Translation model assets are managed separately by macOS.
+  EOS
+end
