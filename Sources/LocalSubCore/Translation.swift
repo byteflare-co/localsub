@@ -1,6 +1,6 @@
 import Foundation
 
-public enum EnglishTranslationMode: String, Codable, CaseIterable, Sendable {
+public enum EnglishTranslationMode: String, Codable, CaseIterable, Sendable, Hashable {
     case appleLocal
     case gpt56Luna
 }

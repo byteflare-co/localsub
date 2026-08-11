@@ -1,83 +1,123 @@
 import Foundation
 import LocalSubApple
+import LocalSubCLIKit
 import LocalSubCloud
 import LocalSubCore
 
-struct CLIOptions {
-    let input: URL
-    let output: URL
-    let language: SourceLanguage
-    let translationMode: EnglishTranslationMode
-    let glossary: URL?
-    let acknowledgesLunaDataTransfer: Bool
+enum CLIRuntimeError: Error, LocalizedError {
+    case noSpeech
+    case lunaConsentRequired
+    case modelDownloadConsentRequired
+    case doctorNotReady
 
-    static func parse(_ arguments: [String]) throws -> CLIOptions {
-        guard let input = arguments.first, input != "--help" else { throw CLIError.usage }
-        var output: String?
-        var language = SourceLanguage.japanese
-        var translationMode = EnglishTranslationMode.appleLocal
-        var glossary: String?
-        var acknowledgesLunaDataTransfer = false
-        var index = 1
-        while index < arguments.count {
-            switch arguments[index] {
-            case "--output" where index + 1 < arguments.count:
-                output = arguments[index + 1]; index += 2
-            case "--language" where index + 1 < arguments.count:
-                guard let parsed = SourceLanguage(rawValue: arguments[index + 1]) else { throw CLIError.usage }
-                language = parsed; index += 2
-            case "--translation" where index + 1 < arguments.count:
-                switch arguments[index + 1] {
-                case "apple": translationMode = .appleLocal
-                case "luna": translationMode = .gpt56Luna
-                default: throw CLIError.usage
-                }
-                index += 2
-            case "--glossary" where index + 1 < arguments.count:
-                glossary = arguments[index + 1]; index += 2
-            case "--acknowledge-luna-data-transfer":
-                acknowledgesLunaDataTransfer = true; index += 1
-            default: throw CLIError.usage
-            }
+    var errorDescription: String? {
+        switch self {
+        case .noSpeech:
+            "No speech was recognized."
+        case .lunaConsentRequired:
+            "\(CloudPrivacyDisclosure.confirmation)\n内容を確認し、同意する場合だけ --acknowledge-luna-data-transfer を指定してください。"
+        case .modelDownloadConsentRequired:
+            "Apple Speechモデルをダウンロードします。同意する場合だけ --accept-model-download を指定してください。"
+        case .doctorNotReady:
+            "Environment is not ready. Resolve the FAIL checks above and run 'localsub doctor' again."
         }
-        guard let output else { throw CLIError.usage }
-        return CLIOptions(
-            input: URL(fileURLWithPath: input).standardizedFileURL,
-            output: URL(fileURLWithPath: output).standardizedFileURL,
-            language: language,
-            translationMode: translationMode,
-            glossary: glossary.map { URL(fileURLWithPath: $0).standardizedFileURL },
-            acknowledgesLunaDataTransfer: acknowledgesLunaDataTransfer
-        )
     }
 }
 
-enum CLIError: Error, LocalizedError {
-    case usage
-    case noSpeech
-    case lunaConsentRequired
-    var errorDescription: String? {
-        switch self {
-        case .usage: "Usage: localsub INPUT --output OUTPUT.mp4 --language japanese|english [--translation apple|luna] [--glossary terms.txt] [--acknowledge-luna-data-transfer]"
-        case .noSpeech: "No speech was recognized."
-        case .lunaConsentRequired:
-            "\(CloudPrivacyDisclosure.confirmation)\n内容を確認し、同意する場合だけ --acknowledge-luna-data-transfer を指定してください。"
-        }
-    }
+func writeStandardOutput(_ value: String) {
+    FileHandle.standardOutput.write(Data("\(value)\n".utf8))
+}
+
+func writeStandardError(_ value: String) {
+    FileHandle.standardError.write(Data("\(value)\n".utf8))
 }
 
 func report(_ stage: String) {
-    FileHandle.standardError.write(Data("{\"stage\":\"\(stage)\"}\n".utf8))
+    writeStandardError("{\"stage\":\"\(stage)\"}")
 }
 
-func run() async throws {
-    let options = try CLIOptions.parse(Array(CommandLine.arguments.dropFirst()))
+func locale(for language: SourceLanguage) -> Locale {
+    language == .japanese ? Locale(identifier: "ja-JP") : Locale(identifier: "en-US")
+}
+
+func doctor(_ options: DoctorOptions) async throws {
+    var checks: [DiagnosticCheck] = []
+
+    #if arch(arm64)
+    checks.append(.init(name: "architecture", status: .pass, detail: "Apple Silicon (arm64)"))
+    #else
+    checks.append(.init(name: "architecture", status: .fail, detail: "Apple Silicon (arm64) is required"))
+    #endif
+
+    let version = ProcessInfo.processInfo.operatingSystemVersion
+    if version.majorVersion >= 26 {
+        checks.append(.init(
+            name: "macOS",
+            status: .pass,
+            detail: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
+        ))
+    } else {
+        checks.append(.init(name: "macOS", status: .fail, detail: "macOS 26 or later is required"))
+    }
+
+    let speechLocale = locale(for: options.language)
+    switch await AppleSpeechTranscriber.modelStatus(locale: speechLocale) {
+    case .installed:
+        checks.append(.init(name: "speech", status: .pass, detail: "\(speechLocale.identifier) model is installed"))
+    case .notInstalled:
+        checks.append(.init(
+            name: "speech",
+            status: .fail,
+            detail: "\(speechLocale.identifier) model is missing; run 'localsub setup --language \(options.language.rawValue) --accept-model-download'"
+        ))
+    case .unavailable:
+        checks.append(.init(name: "speech", status: .fail, detail: "\(speechLocale.identifier) is unavailable"))
+    }
+
+    if options.language == .japanese {
+        checks.append(.init(name: "translation", status: .pass, detail: "not required for Japanese speech"))
+    } else {
+        switch options.translationMode {
+        case .appleLocal:
+            checks.append(.init(
+                name: "translation",
+                status: .warning,
+                detail: "Apple en→ja assets must already be installed; first-use consent is available in the LocalSub app"
+            ))
+        case .gpt56Luna:
+            let hasKey = !(ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? "").isEmpty
+            checks.append(.init(
+                name: "OPENAI_API_KEY",
+                status: hasKey ? .pass : .fail,
+                detail: hasKey ? "available to this process" : "required for --translation luna"
+            ))
+        }
+    }
+
+    let report = DoctorReport(checks: checks)
+    writeStandardOutput(report.rendered())
+    writeStandardOutput(report.isReady ? "READY" : "NOT READY")
+    guard report.isReady else { throw CLIRuntimeError.doctorNotReady }
+}
+
+func setup(_ options: SetupOptions) async throws {
+    guard options.acceptsModelDownload else {
+        throw CLIRuntimeError.modelDownloadConsentRequired
+    }
+    let speechLocale = locale(for: options.language)
+    report("installing-speech-model")
+    try await AppleSpeechTranscriber().install(locale: speechLocale)
+    report("completed")
+    writeStandardOutput("Installed Apple Speech model for \(speechLocale.identifier).")
+}
+
+func generate(_ options: GenerateOptions) async throws {
     guard CloudPrivacyDisclosure.permitsCLI(
         mode: options.translationMode,
         acknowledged: options.acknowledgesLunaDataTransfer
-    ) else { throw CLIError.lunaConsentRequired }
+    ) else { throw CLIRuntimeError.lunaConsentRequired }
     if options.translationMode == .gpt56Luna {
-        FileHandle.standardError.write(Data("\(CloudPrivacyDisclosure.confirmation)\n".utf8))
+        writeStandardError(CloudPrivacyDisclosure.confirmation)
     }
     let temporary = FileManager.default.temporaryDirectory
         .appendingPathComponent("localsub-\(UUID().uuidString).m4a")
@@ -85,7 +125,7 @@ func run() async throws {
 
     report("inspecting")
     _ = try await MediaInspector().inspect(options.input)
-    let locale = options.language == .japanese ? Locale(identifier: "ja-JP") : Locale(identifier: "en-US")
+    let speechLocale = locale(for: options.language)
     let glossaryText: String
     if let glossaryURL = options.glossary {
         let data = try Data(contentsOf: glossaryURL, options: [.mappedIfSafe])
@@ -97,20 +137,20 @@ func run() async throws {
         glossaryText = ""
     }
     let glossary = try GlossaryParser.parse(glossaryText)
-    switch await AppleSpeechTranscriber.modelStatus(locale: locale) {
+    switch await AppleSpeechTranscriber.modelStatus(locale: speechLocale) {
     case .installed: break
-    case .notInstalled: throw ApplePipelineError.localeNotInstalled(locale.identifier)
-    case .unavailable: throw ApplePipelineError.localeUnavailable(locale.identifier)
+    case .notInstalled: throw ApplePipelineError.localeNotInstalled(speechLocale.identifier)
+    case .unavailable: throw ApplePipelineError.localeUnavailable(speechLocale.identifier)
     }
     report("extracting-audio")
     try await AudioExtractor().extract(from: options.input, to: temporary)
     report("transcribing")
     var timed = try await AppleSpeechTranscriber().transcribe(
         audioURL: temporary,
-        locale: locale,
+        locale: speechLocale,
         contextualStrings: glossary.map(\.source)
     )
-    guard !timed.isEmpty else { throw CLIError.noSpeech }
+    guard !timed.isEmpty else { throw CLIRuntimeError.noSpeech }
 
     if options.language == .english {
         report("translating")
@@ -140,9 +180,29 @@ func run() async throws {
     report("completed")
 }
 
+func run() async throws {
+    switch try CLIParser.parse(Array(CommandLine.arguments.dropFirst())) {
+    case .help:
+        writeStandardOutput(CLIHelp.text)
+    case .version:
+        writeStandardOutput("localsub \(LocalSubVersion.current)")
+    case .doctor(let options):
+        try await doctor(options)
+    case .setup(let options):
+        try await setup(options)
+    case .generate(let options):
+        try await generate(options)
+    }
+}
+
 do {
     try await run()
 } catch {
-    FileHandle.standardError.write(Data("localsub: \(error.localizedDescription)\n".utf8))
-    exit(error is CLIError ? 64 : 1)
+    writeStandardError("localsub: \(error.localizedDescription)")
+    switch error {
+    case is CLIParseError, CLIRuntimeError.modelDownloadConsentRequired, CLIRuntimeError.lunaConsentRequired:
+        exit(64)
+    default:
+        exit(1)
+    }
 }
