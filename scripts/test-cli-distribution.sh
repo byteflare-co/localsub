@@ -35,9 +35,11 @@ rendered="$working_dir/rendered"
 /bin/sh -n "$rendered/install.sh"
 /usr/bin/ruby -c "$rendered/localsub.rb" >/dev/null
 if command -v brew >/dev/null 2>&1; then
-  brew style "$rendered/localsub.rb" >/dev/null
+  # The public tap may already contain the same class; only suppress that cross-file duplicate.
+  brew style --except-cops Lint/DuplicateMethods "$rendered/localsub.rb" >/dev/null
 fi
 /bin/zsh -n "$repo_dir/scripts/dogfood-cli-release.sh"
+/bin/zsh -n "$repo_dir/scripts/readback-draft-release-id.sh"
 /usr/bin/grep -q "version=\"$current_version\"" "$rendered/install.sh"
 /usr/bin/grep -q "sha256 \"$fake_sha\"" "$rendered/localsub.rb"
 /usr/bin/grep -q '^class Localsub < Formula$' "$rendered/localsub.rb"
@@ -54,6 +56,24 @@ if "$repo_dir/scripts/render-cli-distribution.sh" \
   print -u2 -- "renderer accepted an invalid version"
   exit 1
 fi
+
+fake_gh="$working_dir/fake-gh"
+fake_gh_state="$working_dir/fake-gh-state"
+/usr/bin/touch "$fake_gh_state"
+/bin/chmod 600 "$fake_gh_state"
+/usr/bin/printf '%s\n' '#!/bin/zsh' \
+  'set -euo pipefail' \
+  'count=$(/usr/bin/wc -l <"$LOCALSUB_FAKE_GH_STATE")' \
+  '/usr/bin/printf "call\\n" >>"$LOCALSUB_FAKE_GH_STATE"' \
+  'if (( count >= 2 )); then /usr/bin/printf "123456\\n"; fi' \
+  >"$fake_gh"
+/bin/chmod 700 "$fake_gh"
+draft_id=$(LOCALSUB_FAKE_GH_STATE="$fake_gh_state" \
+  LOCALSUB_RELEASE_READBACK_ATTEMPTS=3 LOCALSUB_RELEASE_READBACK_DELAY_SECONDS=0 \
+  "$repo_dir/scripts/readback-draft-release-id.sh" \
+  byteflare-co/localsub v9.9.9 "$fake_gh")
+[[ $draft_id == 123456 ]]
+[[ $(/usr/bin/wc -l <"$fake_gh_state") -eq 3 ]]
 if "$repo_dir/scripts/render-cli-distribution.sh" \
   "0.1.0" "short" "$working_dir/invalid-sha" >/dev/null 2>&1; then
   print -u2 -- "renderer accepted an invalid source checksum"
