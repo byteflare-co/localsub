@@ -64,11 +64,8 @@ fi
   --title "LocalSub CLI $tag" \
   --notes-file "$notes_file"
 
-release_ids=$("$gh_path" api "repos/$repository/releases" --paginate \
-  --jq ".[] | select(.tag_name == \"$tag\" and .draft == true) | .id")
-release_count=$(/usr/bin/printf '%s\n' "$release_ids" | /usr/bin/awk 'NF { count += 1 } END { print count + 0 }')
-[[ $release_count -eq 1 ]] || { print -u2 -- "expected exactly one draft release"; exit 1 }
-release_id=$release_ids
+release_id=$("$repo_dir/scripts/readback-draft-release-id.sh" \
+  "$repository" "$tag" "$gh_path")
 "$gh_path" api --method PATCH "repos/$repository/releases/$release_id" \
   -F draft=false -F prerelease=true >/dev/null
 
