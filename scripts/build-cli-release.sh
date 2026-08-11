@@ -25,6 +25,8 @@ macos_major=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F. '{ print $1 }'
   exit 1
 }
 
+"$repo_dir/scripts/check-cli-release-credentials.sh" >/dev/null
+
 version=$(/usr/bin/sed -n 's/.*static let current = "\([^"]*\)".*/\1/p' \
   "$repo_dir/Sources/LocalSubCLIKit/CLIParser.swift")
 /usr/bin/printf '%s\n' "$version" | /usr/bin/grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' || {

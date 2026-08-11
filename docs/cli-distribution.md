@@ -13,20 +13,23 @@ brew install --cask byteflare-co/tap/localsub
 localsub doctor
 ```
 
-Homebrewを使わない場合は、GitHubの最新Immutable Releaseに含まれるインストーラーを利用できます。
+Homebrewを使わない場合は、GitHubのバージョン固定Immutable Releaseに含まれるインストーラーを利用できます。
 
 ```bash
-curl -fsSL https://github.com/byteflare-co/localsub/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh | sh
 ~/.local/bin/localsub doctor
 ```
 
 `curl | sh`は取得したシェルコードを直ちに実行します。内容を先に確認する場合は次のようにします。
 
 ```bash
-curl -fsSLO https://github.com/byteflare-co/localsub/releases/latest/download/install.sh
+curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh
 less install.sh
 sh install.sh
 ```
+
+GitHubの`releases/latest`はプレリリースを返さないため、プレリリース期間中は必ずバージョンを固定します。
+安定版公開後は、READMEの推奨URLをGitHubのlatestリリースURLへ切り替えます。
 
 インストーラーは`sudo`を使用せず、標準では`~/.local/bin/localsub`へ配置します。対象OS・CPU、
 SHA-256、ZIP内容、Developer ID署名、Apple Developer Team Identifier、コード署名Identifier、
@@ -66,6 +69,8 @@ CLIだけで完結させる場合は、データ送信条件を確認してLuna�
 export LOCALSUB_SIGNING_IDENTITY='Developer ID Application: ...'
 export LOCALSUB_NOTARY_PROFILE='localsub-notary'
 export LOCALSUB_EXPECTED_TEAM_ID='XXXXXXXXXX'
+
+./scripts/check-cli-release-credentials.sh
 
 release_dir=$(mktemp -d /tmp/localsub-release-output.XXXXXX)
 ./scripts/build-cli-release.sh "$release_dir"

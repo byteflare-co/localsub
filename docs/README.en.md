@@ -83,10 +83,11 @@ localsub doctor
 Without Homebrew:
 
 ```bash
-curl -fsSL https://github.com/byteflare-co/localsub/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh | sh
 ~/.local/bin/localsub doctor
 ```
 
+GitHub does not include prereleases in `releases/latest`, so this URL is pinned to an exact version.
 LocalSub CLI supports Apple Silicon and macOS 26 or later. See
 [CLI distribution and release](cli-distribution.md) for model preparation, installer controls,
 and the release process.

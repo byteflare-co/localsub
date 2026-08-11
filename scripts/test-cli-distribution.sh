@@ -7,13 +7,29 @@ cleanup() { /bin/rm -rf "$working_dir" }
 trap cleanup EXIT HUP INT TERM
 
 fake_sha=$(/usr/bin/printf 'a%.0s' {1..64})
+current_version=$(/usr/bin/sed -n 's/.*static let current = "\([^"]*\)".*/\1/p' \
+  "$repo_dir/Sources/LocalSubCLIKit/CLIParser.swift")
+[[ $current_version == *-* ]] || {
+  print -u2 -- "distribution test expects the current release to be a prerelease"
+  exit 1
+}
+for install_doc in "$repo_dir/README.md" "$repo_dir/docs/README.en.md" "$repo_dir/docs/cli-distribution.md"; do
+  /usr/bin/grep -Fq "/releases/download/v${current_version}/install.sh" "$install_doc" || {
+    print -u2 -- "prerelease installer URL is not version-pinned in $install_doc"
+    exit 1
+  }
+  if /usr/bin/grep -Fq '/releases/latest/download/install.sh' "$install_doc"; then
+    print -u2 -- "prerelease documentation must not use GitHub's stable-only latest URL"
+    exit 1
+  fi
+done
 rendered="$working_dir/rendered"
 "$repo_dir/scripts/render-cli-distribution.sh" \
-  "0.1.0-alpha.1" "ABCDE12345" "$fake_sha" "$rendered" >/dev/null
+  "$current_version" "ABCDE12345" "$fake_sha" "$rendered" >/dev/null
 
 /bin/sh -n "$rendered/install.sh"
 /usr/bin/ruby -c "$rendered/localsub.rb" >/dev/null
-/usr/bin/grep -q 'version="0.1.0-alpha.1"' "$rendered/install.sh"
+/usr/bin/grep -q "version=\"$current_version\"" "$rendered/install.sh"
 /usr/bin/grep -q 'expected_team_id="ABCDE12345"' "$rendered/install.sh"
 /usr/bin/grep -q "sha256 \"$fake_sha\"" "$rendered/localsub.rb"
 if /usr/bin/grep -q '__LOCALSUB_' "$rendered/install.sh" "$rendered/localsub.rb"; then
