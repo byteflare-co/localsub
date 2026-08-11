@@ -66,6 +66,7 @@ fake_gh_state="$working_dir/fake-gh-state"
 /bin/chmod 600 "$fake_gh_state"
 /usr/bin/printf '%s\n' '#!/bin/zsh' \
   'set -euo pipefail' \
+  'for argument in "$@"; do [[ $argument != --slurp ]] || exit 65; done' \
   'count=$(/usr/bin/wc -l <"$LOCALSUB_FAKE_GH_STATE")' \
   '/usr/bin/printf "call\\n" >>"$LOCALSUB_FAKE_GH_STATE"' \
   'if (( count >= 2 )); then /usr/bin/printf "123456\\n"; fi' \

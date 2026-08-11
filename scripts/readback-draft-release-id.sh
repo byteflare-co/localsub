@@ -21,8 +21,10 @@ delay_seconds=${LOCALSUB_RELEASE_READBACK_DELAY_SECONDS:-1}
 }
 
 for attempt in {1..$attempts}; do
-  release_ids=$("$gh_path" api "repos/$repository/releases" --paginate --slurp \
-    --jq "flatten | .[] | select(.tag_name == \"$tag\" and .draft == true) | .id")
+  # `gh api --paginate --jq` applies the filter once per page. Do not combine
+  # `--slurp` with `--jq`: released gh versions reject that flag combination.
+  release_ids=$("$gh_path" api "repos/$repository/releases" --paginate \
+    --jq ".[] | select(.tag_name == \"$tag\" and .draft == true) | .id")
   release_count=$(/usr/bin/printf '%s\n' "$release_ids" \
     | /usr/bin/awk 'NF { count += 1 } END { print count + 0 }')
   if (( release_count == 1 )); then
