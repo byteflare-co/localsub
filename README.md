@@ -85,10 +85,11 @@ localsub doctor
 Homebrewを使わない場合：
 
 ```bash
-curl -fsSL https://github.com/byteflare-co/localsub/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh | sh
 ~/.local/bin/localsub doctor
 ```
 
+プレリリースはGitHubの`releases/latest`には含まれないため、URLをバージョン固定しています。
 対応環境はApple SiliconとmacOS 26以降です。初回モデル準備、インストーラーの検証内容、
 リリース工程は[CLIの配布とリリース](docs/cli-distribution.md)を参照してください。
 
