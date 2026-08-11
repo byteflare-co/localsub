@@ -10,8 +10,10 @@ swift build --package-path "$repo_dir" --scratch-path "$scratch_dir" -c "$config
 binary_dir=$(swift build --package-path "$repo_dir" --scratch-path "$scratch_dir" -c "$configuration" --show-bin-path)
 
 mkdir -p "$bundle_dir/Contents/MacOS"
+mkdir -p "$bundle_dir/Contents/Resources"
 cp "$repo_dir/Config/Info.plist" "$bundle_dir/Contents/Info.plist"
 cp "$binary_dir/LocalSubApp" "$bundle_dir/Contents/MacOS/LocalSub"
+"$repo_dir/scripts/build-icon.sh" "$bundle_dir/Contents/Resources/LocalSub.icns" >/dev/null
 codesign --force --sign - --options runtime \
   --entitlements "$repo_dir/Config/LocalSubApp.entitlements" \
   "$bundle_dir"

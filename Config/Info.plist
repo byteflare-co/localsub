@@ -5,6 +5,7 @@
     <key>CFBundleDisplayName</key><string>LocalSub</string>
     <key>CFBundleExecutable</key><string>LocalSub</string>
     <key>CFBundleIdentifier</key><string>jp.byteflare.localsub</string>
+    <key>CFBundleIconFile</key><string>LocalSub.icns</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>LocalSub</string>
     <key>CFBundlePackageType</key><string>APPL</string>
@@ -16,4 +17,3 @@
     <string>選択した動画の音声から字幕を作成するために音声認識を使用します。</string>
 </dict>
 </plist>
-
