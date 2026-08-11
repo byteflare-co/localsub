@@ -38,9 +38,9 @@ Repository-wide invariants:
 - Do not add network providers, analytics, or diagnostic upload without an explicit ADR,
   updated threat model, bounded egress contract, and user-visible consent. The sole current
   exception is the optional text-only Luna path specified by ADR-006.
-- Publish CLI binaries only from a clean, version-tagged commit. Require Developer ID signing,
-  notarization, a fixed Team Identifier and signing identifier, release checksums, immutable
-  release assets, and fail-closed installer verification before replacing an installed binary.
+- Publish CLI source archives only from a clean, version-tagged commit. Do not attach CLI
+  executables, bottles, or Casks. Pin the custom source archive SHA-256 directly in the Formula
+  and installer, require immutable release assets, and fail closed before publishing a local build.
 - Treat release archives, checksum manifests, Homebrew definitions, and installer download paths
   as untrusted until their structure, size, version, and authenticity checks succeed.
 

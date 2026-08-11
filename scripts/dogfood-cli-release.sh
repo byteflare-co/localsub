@@ -4,20 +4,14 @@ set -euo pipefail
 repo_dir=${0:A:h:h}
 binary_path=${1:-}
 evidence_dir=${2:-}
-expected_team_id=${3:-}
 [[ -n $binary_path && $binary_path == /* && -x $binary_path ]] || {
-  print -u2 -- "usage: $0 /absolute/path/to/installed/localsub /absolute/new/evidence-directory TEAMID1234"
+  print -u2 -- "usage: $0 /absolute/path/to/installed/localsub /absolute/new/evidence-directory"
   exit 64
 }
 [[ -n $evidence_dir && $evidence_dir == /* && $evidence_dir != / && ! -e $evidence_dir ]] || {
   print -u2 -- "evidence directory must be a new absolute path other than /"
   exit 64
 }
-/usr/bin/printf '%s\n' "$expected_team_id" | /usr/bin/grep -Eq '^[A-Z0-9]{10}$' || {
-  print -u2 -- "expected Team ID must contain exactly 10 uppercase letters or digits"
-  exit 64
-}
-
 binary_path=${binary_path:A}
 ffmpeg_path=$(command -v ffmpeg || true)
 ffprobe_path=$(command -v ffprobe || true)
@@ -30,18 +24,6 @@ ffprobe_path=$(command -v ffprobe || true)
 fixture="$evidence_dir/fixtures/ja.mp4"
 output="$evidence_dir/output/ja-captioned.mp4"
 
-/usr/bin/codesign --verify --strict --verbose=2 "$binary_path" \
-  2>"$evidence_dir/logs/codesign-verify.log"
-team_id=$(/usr/bin/codesign -dv --verbose=4 "$binary_path" 2>&1 \
-  | /usr/bin/sed -n 's/^TeamIdentifier=//p')
-identifier=$(/usr/bin/codesign -dv --verbose=4 "$binary_path" 2>&1 \
-  | /usr/bin/sed -n 's/^Identifier=//p')
-[[ $team_id == "$expected_team_id" && $identifier == localsub ]] || {
-  print -u2 -- "installed binary is not the expected Developer ID build"
-  exit 1
-}
-/usr/sbin/spctl --assess --type execute --verbose=2 "$binary_path" \
-  2>"$evidence_dir/logs/spctl.log"
 installed_version=$("$binary_path" --version)
 expected_version=$(/usr/bin/sed -n 's/.*static let current = "\([^"]*\)".*/\1/p' \
   "$repo_dir/Sources/LocalSubCLIKit/CLIParser.swift")
@@ -120,5 +102,5 @@ done
   /usr/bin/shasum -a 256 output/ja-captioned.mp4 output/contact-sheet.png >logs/SHA256SUMS
 )
 
-print -r -- "LocalSub release dogfood passed for Team $team_id"
+print -r -- "LocalSub source-built CLI release dogfood passed"
 print -r -- "$evidence_dir"

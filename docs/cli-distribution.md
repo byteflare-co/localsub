@@ -1,39 +1,31 @@
 # CLIの配布とリリース
 
-LocalSub CLIは、Apple SiliconとmacOS 26以降を対象に、署名・公証済みの単一バイナリとして
-GitHub Releasesから提供します。GitHub Releaseが配布物の正本で、curlインストーラーと
-Homebrew Caskは同一のバージョン固定ZIPを参照します。
+LocalSub CLIはApple SiliconとmacOS 26以降を対象に、バージョン固定したソースから利用者のMac上で
+ビルドします。実行バイナリ、Homebrew bottle、Caskは配布しません。このためCLIの利用にApple
+Developer Program、Developer ID署名、Apple公証は不要です。Desktopアプリの配布要件とは別です。
 
 ## 利用者向けインストール
 
-推奨経路はHomebrewです。
+推奨経路はHomebrew Formulaです。Xcode 26以降が必要です。
 
 ```bash
-brew install --cask byteflare-co/tap/localsub
+brew install byteflare-co/tap/localsub
 localsub doctor
 ```
 
-Homebrewを使わない場合は、GitHubのバージョン固定Immutable Releaseに含まれるインストーラーを利用できます。
-
-```bash
-curl -fsSL https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh | sh
-~/.local/bin/localsub doctor
-```
-
-`curl | sh`は取得したシェルコードを直ちに実行します。内容を先に確認する場合は次のようにします。
+Homebrewを使わない場合は、バージョン固定Immutable Releaseのインストーラーを確認して実行します。
 
 ```bash
 curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh
 less install.sh
 sh install.sh
+~/.local/bin/localsub doctor
 ```
 
-GitHubの`releases/latest`はプレリリースを返さないため、プレリリース期間中は必ずバージョンを固定します。
-安定版公開後は、READMEの推奨URLをGitHubのlatestリリースURLへ切り替えます。
-
-インストーラーは`sudo`を使用せず、標準では`~/.local/bin/localsub`へ配置します。対象OS・CPU、
-SHA-256、ZIP内容、Developer ID署名、Apple Developer Team Identifier、コード署名Identifier、
-公証状態を検証し、すべて成功した場合だけ同一ボリューム上で公開します。
+一行の`curl | sh`も技術的には可能ですが、取得したコードを確認できる上記手順を推奨します。
+インストーラーには対象ソースのSHA-256が直接埋め込まれています。同じ配布元から得たチェックサムを
+信頼アンカーにはしません。アーカイブのハッシュ、パス、件数、展開サイズ、シンボリックリンク、
+ビルド結果のバージョンを検査し、成功後だけ`~/.local/bin/localsub`へatomicに配置します。`sudo`は使いません。
 
 ## 初回セットアップ
 
@@ -42,72 +34,62 @@ localsub doctor --language japanese
 localsub setup --language japanese --accept-model-download
 ```
 
-`setup`は指定言語のApple Speechモデルだけを、明示的な同意後に導入します。英日Apple Translationの
-初回モデル利用にはUI上の同意が必要なため、LocalSubデスクトップアプリで準備してください。
-CLIだけで完結させる場合は、データ送信条件を確認してLuna翻訳を明示的に選択できます。
+`setup`は指定言語のApple Speechモデルだけを、明示同意後に導入します。英日Apple Translationの
+初回モデル利用にはUI上の同意が必要です。CLIだけで完結させる場合は、データ送信条件を確認して
+Luna翻訳を明示的に選択できます。
 
 ## リリース担当者向け手順
 
-前提条件：
+前提は、Apple Silicon/macOS 26、Xcode 26、`gh`のリポジトリ管理権限、GitHub Immutable Releasesです。
+Appleの証明書や公証資格情報は使いません。
 
-- `株式会社Byteflare`のApple Developer Program組織アカウント
-- Keychainに導入済みの`Developer ID Application`証明書
-- `notarytool`のKeychain profile
-- 10文字のApple Developer Team ID
-- `gh`で`byteflare-co/localsub`へ管理者認証済み
-- GitHub Immutable Releasesが有効
-
-認証情報はリポジトリへ保存しません。Apple ID、app-specific password、API秘密鍵などをローカルで
-扱う場合は、ユーザーグローバルの`op-cached`から子プロセスへ注入します。
-
-1. `LocalSubVersion.current`とリリースノートを更新し、全テストを通す。
+1. バージョンとリリースノートを更新し、全テストを通す。
 2. リリースコミットを`main`へmergeする。
-3. `v<version>`の軽量タグを作り、originへpushする。
-4. 署名・公証済み資産を生成する。
+3. `v<version>`タグを作り、originへpushする。
+4. クリーンなタグ付きHEADから配布物を生成する。
 
 ```bash
-export LOCALSUB_SIGNING_IDENTITY='Developer ID Application: ...'
-export LOCALSUB_NOTARY_PROFILE='localsub-notary'
-export LOCALSUB_EXPECTED_TEAM_ID='XXXXXXXXXX'
-
-./scripts/check-cli-release-credentials.sh
-
 release_dir=$(mktemp -d /tmp/localsub-release-output.XXXXXX)
 ./scripts/build-cli-release.sh "$release_dir"
 ```
 
-5. ZIP、`install.sh`、`SHA256SUMS`、Homebrew Caskを別々に確認する。
-6. Draft Releaseを作成し、全assetのアップロード後に公開する。
+生成物はcustom source archive、埋め込みハッシュ付き`install.sh`、Formula、`SHA256SUMS`、
+tag・commit・検証toolchainを記録した`SOURCE-METADATA.json`です。スクリプトはarchiveを別ディレクトリへ
+展開してネットワーク不要の`swift build -c release --product localsub`とバージョン一致まで検証します。
+FormulaではHomebrewの外側sandbox内でSwiftPMの入れ子sandboxがmacOS 26に拒否されるため、
+`--disable-sandbox`はSwiftPM側だけに指定します。Homebrewのビルドsandboxは維持されます。
+
+5. 内容を確認し、Draft Releaseを作成して全asset添付後に公開する。
 
 ```bash
 ./scripts/publish-cli-release.sh "$release_dir" \
   "$PWD/docs/releases/v0.1.0-alpha.1.md"
 ```
 
-公開スクリプトは、クリーンなタグ付きHEAD、remote tag一致、チェックサム、Immutable Releases有効化を
-再確認します。既存Releaseの置換は行いません。
+6. 検証済みFormulaをcleanな`byteflare-co/homebrew-tap` checkoutへbyte-for-byteでstageし、
+   Formula差分だけのPRを作る。手作業のコピーや編集はしない。
 
-7. 生成された`localsub.rb`を`byteflare-co/homebrew-tap`の`Casks/localsub.rb`として反映する。
-8. curlとHomebrewの両方を、既存インストールのない別ユーザー領域で確認する。
+```bash
+./scripts/stage-homebrew-formula.sh "$release_dir" /absolute/path/to/homebrew-tap \
+  0.1.0-alpha.1 "$(git rev-parse HEAD)"
+```
 
-公開したバイナリの署名・公証と日本語動画生成は、空の証拠ディレクトリを指定して一括確認できます。
+tap側のPR CIでも`brew style`、`brew audit`、source build、`brew test`を必須にする。
+7. 新しいprefixでFormulaのinstall、test、upgrade、uninstallを確認する。
+8. curl経路でインストールしたCLIを、非機密の合成動画で確認する。
 
 ```bash
 evidence_dir=$(mktemp -d /tmp/localsub-release-dogfood-parent.XXXXXX)/evidence
-./scripts/dogfood-cli-release.sh "$(command -v localsub)" "$evidence_dir" "$LOCALSUB_EXPECTED_TEAM_ID"
+./scripts/dogfood-cli-release.sh "$(command -v localsub)" "$evidence_dir"
 ```
-
-このスクリプトは非機密の合成音声fixtureを実行時に作成し、stageログ、`ffprobe`、字幕領域の
-輝度検査、contact sheet、SHA-256を保存します。Developer ID署名またはApple公証を確認できない
-バイナリは処理前に拒否します。
 
 ## 公開後の確認
 
-- GitHub ReleaseがImmutableか
-- tag・target commit・`main` HEADが一致するか
-- `gh release verify`と`gh release verify-asset`が成功するか
-- curlインストール後の署名・Team ID・公証状態が一致するか
-- Homebrewのinstall、upgrade、uninstallが成功するか
-- `localsub doctor`と、非機密の短い動画による字幕付きMP4生成が成功するか
+- ReleaseがImmutableで、tag・target commit・`main` HEADが一致する
+- `gh release verify`とcustom source assetの検証が成功する
+- Formulaとインストーラーに埋め込まれたSHA-256がsource archiveと一致する
+- Releaseに実行バイナリ、Cask、bottleが含まれない
+- Homebrewのinstall、test、upgrade、uninstallが成功する
+- `localsub doctor`と短い非機密動画による字幕付きMP4生成が成功する
 
-署名・公証・実動画生成のいずれかが未確認なら、一般提供完了として扱いません。
+Gatekeeperを回避するための`xattr`削除、`spctl --master-disable`、ad-hoc再署名は案内しません。
