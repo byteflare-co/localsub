@@ -176,7 +176,9 @@ final class CueBuilderTests: XCTestCase {
         XCTAssertEqual(cues.map(\.text).joined().replacingOccurrences(of: "\n", with: ""), input.text)
         XCTAssertGreaterThanOrEqual(cues.count, 5_000)
         XCTAssertLessThanOrEqual(cues.count, 10_000)
-        XCTAssertLessThan(elapsed, .seconds(5))
+        // Keep this as a coarse regression guard rather than a machine benchmark. GitHub's
+        // shared macOS runners are materially slower than a local Apple Silicon workstation.
+        XCTAssertLessThan(elapsed, .seconds(20))
     }
 }
 
