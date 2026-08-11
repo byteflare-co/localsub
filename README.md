@@ -35,20 +35,21 @@ macOS 26以降を搭載したApple Silicon Macと、AVFoundationでデコード�
 MP4／MOVファイルです。
 
 > [!IMPORTANT]
-> LocalSubは現在開発中です。公式に署名されたバイナリリリースはまだ公開していません。
-> ローカルビルドは開発とドッグフーディングを目的としています。
+> LocalSubは現在開発中です。Desktopアプリの公式な署名済みバイナリはまだ公開していません。
+> CLIは、バージョン固定した公開ソースをHomebrewまたは検証付きインストーラーで各自のMac上に
+> ビルドして利用できます。
 
 ## リポジトリ構成
 
 - `Sources/LocalSubCore`: 決定論的なドメインロジックとプロバイダー契約
 - `Sources/LocalSubApple`: Apple Speech、Translation、AVFoundationのアダプター
 - `Sources/LocalSubCloud`: 任意で利用できる、制限付きGPT-5.6 Lunaテキスト翻訳アダプター
-- `Sources/LocalSubCLI`: 開発・ドッグフーディング用CLI
+- `Sources/LocalSubCLI`: 一般公開しているソースビルド型CLI
 - `Sources/LocalSubApp`: SwiftUIデスクトップアプリ
 - `Tests`: TDDによるユニットテストと統合テスト
 - `docs/architecture`: 設計およびアーキテクチャ決定記録
 - `docs/security`: リポジトリの脅威モデル
-- `docs/qa`: ドッグフーディング項目と手動検証用アセット
+- `docs/qa`: 手動検証手順と公開リリースの検証記録
 
 正式な設計は[software-design.md](docs/architecture/software-design.md)を参照してください。
 
@@ -73,7 +74,7 @@ Desktopアプリの配布可能なビルドには、Developer ID署名、Hardene
 Desktopアプリに関するApple Developer Program、Developer ID、公証、Mac App Storeの要件は
 [配布ガイド](docs/distribution.md)を参照してください。
 
-## 開発者向けCLI
+## CLI
 
 ### インストール
 
@@ -100,7 +101,7 @@ CLIは固定されたソースアーカイブを検証し、ユーザーのMac�
 ### 使い方
 
 ```bash
-swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
+localsub input.mp4 \
   --output captioned.mp4 --language japanese
 ```
 

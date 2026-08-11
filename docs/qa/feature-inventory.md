@@ -1,6 +1,6 @@
 # LocalSub 機能・連続ユースケース一覧
 
-基準リビジョン: `codex/localsub` current worktree（2026-08-11 dogfood）
+基準リビジョン: 公開リリース`v0.1.0-alpha.2`と、その後の`main`
 
 設計上の予定ではなく、現行コードとテストで確認できるものを列挙する。
 
@@ -23,7 +23,7 @@
 | F-13 | 既存ファイル・symlinkの排他的な非上書き公開 | 非UI・裏側 | `Sources/LocalSubApple/SubtitleVideoExporter.swift:178-215`; `Sources/LocalSubApple/NonReplacingFileWriter.swift` | DSK-E-04, CLI-E-03 |
 | F-14 | UTF-8 SRT保存 | 実装済み | `Sources/LocalSubApp/LocalSubApp.swift:270-276,399-400`; `Sources/LocalSubCore/SRTSerializer.swift` | DSK-N-05 |
 | F-15 | 生成・翻訳・exportの取消と世代隔離 | 実装済み | `Sources/LocalSubApp/LocalSubApp.swift:96-134,136-218,221-259` | DSK-E-03 |
-| F-16 | 開発CLIとJSON line進捗 | 実装済み | `Sources/LocalSubCLI/main.swift:41-79` | CLI-N-01, CLI-E-02 |
+| F-16 | 公開ソースビルド型CLIとJSON line進捗 | 実装済み | `Sources/LocalSubCLI/main.swift:41-79`; `docs/qa/dogfood-2026-08-12-alpha2.md` | CLI-N-01, CLI-E-02 |
 | F-17 | App Sandbox + Hardened Runtime local bundle | 実装済み | `Config/LocalSubApp.entitlements`; `scripts/build-app.sh` | DSK-N-01 |
 | F-18 | Developer ID/notarized配布ビルド | 実装済み（資格情報依存、未実行） | `scripts/build-release.sh` | DSK-E-06 |
 | F-19 | AppKit動画previewと所有playerに紐づくobserver解除 | 実装済み・30KB fixtureで実機確認 | `Sources/LocalSubApple/AppKitPlayerSurface.swift`; `Sources/LocalSubApp/LocalSubApp.swift` | DSK-N-02, DSK-N-06 |

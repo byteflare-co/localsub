@@ -8,7 +8,8 @@ manual-testing スキルが LocalSub を検証するためのプロジェクト�
 | 項目 | 内容 |
 |---|---|
 | 通常起動 | `./scripts/build-app.sh && open .build/app/LocalSub.app` |
-| 無人/AI検証向け起動 | `swift run --scratch-path /tmp/localsub-cli localsub INPUT --output OUTPUT --language japanese` |
+| 公開CLI | Homebrewまたは検証付きインストーラーで導入した`localsub INPUT --output OUTPUT --language japanese` |
+| checkout回帰検証 | `swift run --scratch-path /tmp/localsub-cli localsub INPUT --output OUTPUT --language japanese` |
 | 主要エンドポイント | `localsub update-check enable --acknowledge-metadata`で同意した後の通常起動時だけ、最大24時間に1回 `GET https://api.github.com/repos/byteflare-co/localsub/releases?per_page=20`。Luna選択・同意時だけ `POST https://api.openai.com/v1/responses` |
 | 健全性確認 | `swift test --scratch-path /tmp/localsub-tests`、`codesign --verify --deep --strict .build/app/LocalSub.app` |
 | 対象環境 | Apple Silicon、macOS 26以降、Xcode 26以降 |
@@ -44,7 +45,7 @@ Luna通信は、テスト用API projectのkeyを `op-cached` から対象process
 |---|---|
 | 機能一覧 | `docs/qa/feature-inventory.md` |
 | Desktop scope | `docs/qa/runbook-desktop.md` — SwiftUI、ファイル権限、日英生成、編集、MP4/SRT、取消・復旧 |
-| CLI scope | `docs/qa/runbook-cli.md` — 開発CLIの再現実行、進捗、exit code、media policy、出力検査 |
+| CLI scope | `docs/qa/runbook-cli.md` — 公開CLIとcheckout回帰の再現実行、進捗、exit code、media policy、出力検査 |
 | 実行コピー・成果物 | `tmp/e2e-runs/<RUN_ID>/`（コミットしない） |
 
 ## 検証用の定番コマンド

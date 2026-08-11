@@ -3,6 +3,9 @@
 検証できないものを PASS にしない。前提未充足はスキップとして理由を記録する。
 CLI成功をDesktopのfile permission、Save panel、bookmark確認の代替にしない。
 
+公開リリースの受入確認ではHomebrewまたは検証付きインストーラーで導入した`localsub`を使う。
+以下の`swift run ... localsub`は、checkout中の変更を同じ手順で回帰確認する場合に限って使う。
+
 ## fixture準備と共通cleanup
 
 `runbook-desktop.md`のfixture準備を実行し、同じ `RUN_DIR` を使う。各コマンドのstdout、stderr、exit code、成果物は `RUN_DIR/evidence` と `RUN_DIR/output` に保存する。成果物を既存ファイルへ向けず、証拠保持後は `RUN_DIR` 全体をFinderのゴミ箱へ移す。

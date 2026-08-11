@@ -21,8 +21,11 @@ expected to disclose relevant conflicts of interest and to follow the
 ## Releases and security
 
 Only 株式会社Byteflare may designate a build as an official LocalSub release. Official release
-artifacts must pass the documented signing, notarization, and verification gates. Vulnerabilities
-must be reported through the private process in [SECURITY.md](SECURITY.md).
+artifacts must pass the controls documented for their distribution form. Desktop binaries require
+Developer ID signing, Hardened Runtime, notarization, stapling, and Gatekeeper verification. The
+source-built CLI requires an immutable tagged release, verified source archive and digest, pinned
+Formula or installer metadata, and documented install tests. Vulnerabilities must be reported
+through the private process in [SECURITY.md](SECURITY.md).
 
 ## Changes to governance
 

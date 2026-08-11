@@ -35,20 +35,20 @@ Apple Silicon Macs running macOS 26 or later and accepts SDR MP4/MOV files that
 AVFoundation can decode.
 
 > [!IMPORTANT]
-> LocalSub is under active development. The repository does not yet publish an official signed
-> binary release. Local builds are for development and dogfooding.
+> LocalSub is under active development. An official signed Desktop binary is not yet available.
+> The CLI is publicly available as a pinned source build through Homebrew or the verified installer.
 
 ## Repository layout
 
 - `Sources/LocalSubCore`: deterministic domain logic and provider contracts
 - `Sources/LocalSubApple`: Apple Speech, Translation, and AVFoundation adapters
 - `Sources/LocalSubCloud`: optional bounded GPT-5.6 Luna text translation adapter
-- `Sources/LocalSubCLI`: developer and dogfooding CLI
+- `Sources/LocalSubCLI`: public source-built CLI
 - `Sources/LocalSubApp`: SwiftUI desktop application
 - `Tests`: TDD unit and integration tests
 - `docs/architecture`: design and architecture decisions
 - `docs/security`: repository threat model
-- `docs/qa`: dogfooding inventory and manual verification assets
+- `docs/qa`: manual test runbooks and public release verification records
 
 See [software-design.md](architecture/software-design.md) for the authoritative design.
 
@@ -71,7 +71,7 @@ keychain profile are provided, and ends with `stapler validate` plus `spctl --as
 See [Distribution](distribution.md) for Apple Developer Program, Developer ID, notarization,
 Mac App Store, and release credential requirements.
 
-## Developer CLI
+## CLI
 
 ### Install
 
@@ -99,7 +99,7 @@ and the release process.
 ### Usage
 
 ```bash
-swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
+localsub input.mp4 \
   --output captioned.mp4 --language japanese
 ```
 

@@ -49,6 +49,10 @@ Appleの証明書や公証資格情報は使いません。
 4. クリーンなタグ付きHEADから配布物を生成する。
 
 ```bash
+tag=$(git describe --tags --exact-match)
+version=${tag#v}
+release_note="$PWD/docs/releases/${tag}.md"
+test -f "$release_note"
 release_dir=$(mktemp -d /tmp/localsub-release-output.XXXXXX)
 ./scripts/build-cli-release.sh "$release_dir"
 ```
@@ -62,8 +66,7 @@ FormulaではHomebrewの外側sandbox内でSwiftPMの入れ子sandboxがmacOS 26
 5. 内容を確認し、Draft Releaseを作成して全asset添付後に公開する。
 
 ```bash
-./scripts/publish-cli-release.sh "$release_dir" \
-  "$PWD/docs/releases/v0.1.0-alpha.2.md"
+./scripts/publish-cli-release.sh "$release_dir" "$release_note"
 ```
 
 6. 検証済みFormulaをcleanな`byteflare-co/homebrew-tap` checkoutへbyte-for-byteでstageし、
@@ -71,10 +74,11 @@ FormulaではHomebrewの外側sandbox内でSwiftPMの入れ子sandboxがmacOS 26
 
 ```bash
 ./scripts/stage-homebrew-formula.sh "$release_dir" /absolute/path/to/homebrew-tap \
-  0.1.0-alpha.2 "$(git rev-parse HEAD)"
+  "$version" "$(git rev-parse HEAD)"
 ```
 
-tap側のPR CIでも`brew style`、`brew audit`、source build、`brew test`を必須にする。
+tap側では、PRをマージする前に`brew style`、`brew audit`、source build、`brew test`の結果を
+レビュー可能な形で確認する。CIを導入した場合も同じ検証を必須gateにする。
 7. 新しいprefixでFormulaのinstall、test、upgrade、uninstallを確認する。
 8. curl経路でインストールしたCLIを、非機密の合成動画で確認する。
 
@@ -85,7 +89,8 @@ evidence_dir=$(mktemp -d /tmp/localsub-release-dogfood-parent.XXXXXX)/evidence
 
 ## 公開後の確認
 
-- ReleaseがImmutableで、tag・target commit・`main` HEADが一致する
+- ReleaseがImmutableで、tag、GitHub Releaseのtarget commit、`SOURCE-METADATA.json`のcommit、
+  検証済みsource archiveの内容が一致する（公開後に進む`main` HEADとの一致は要求しない）
 - `gh release verify`とcustom source assetの検証が成功する
 - Formulaとインストーラーに埋め込まれたSHA-256がsource archiveと一致する
 - Releaseに実行バイナリ、Cask、bottleが含まれない
