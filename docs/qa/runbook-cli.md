@@ -53,6 +53,19 @@ CLI成功をDesktopのfile permission、Save panel、bookmark確認の代替に�
 - readiness: 要設定(GPT-5.6 Luna API project access)
 - 出典: `Sources/LocalSubCLI/main.swift`; `Sources/LocalSubCloud/LunaTranslationProvider.swift`
 
+#### CLI-N-05 更新確認は明示同意後だけ通信し、CLI契約を壊さない
+- ねらい: ローカル優先の既定動作を維持しつつ、同意した利用者だけがHomebrew更新案内を受け取る。
+- 前提: 公開Homebrew版、GitHub Releasesへ接続可能な環境、更新確認が無効な状態。
+- 手順: 1. `update-check status`、`--help`、`--version`を実行する。2. 開示内容を確認し、`update-check enable --acknowledge-metadata`を実行する。3. 通常コマンドを実行してcacheとstderrを確認する。4. `update-check disable`後にstatusを再確認する。5. bounded response、並行check、strict URL/SemVerの契約テストを実行する。
+- 期待する結果:
+  - [ ] 既定は`disabled`で、help、version、設定コマンドはネットワーク確認を行わない
+  - [ ] acknowledgementなしのenableはexit 64で拒否される
+  - [ ] 同意後の確認は固定GitHub endpointだけを使い、最大24時間に1回へ抑制される
+  - [ ] 生成時の更新案内を含むstderrは、1行につき1つのJSON objectを維持する
+  - [ ] disable後は`disabled`へ戻り、自動download/installを行わない
+- readiness: 今すぐ可（新しいreleaseがない場合、通知本文は契約テストで検証）
+- 出典: `Sources/LocalSubCLI/main.swift`; `Sources/LocalSubCLIKit/UpdateChecker.swift`; `docs/architecture/decisions/007-cli-update-notice.md`
+
 ## 異常系
 
 #### CLI-E-01 非対応または音声なしmediaを変換前に拒否する
