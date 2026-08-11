@@ -90,6 +90,17 @@ release_dir=$(mktemp -d /tmp/localsub-release-output.XXXXXX)
 7. 生成された`localsub.rb`を`byteflare-co/homebrew-tap`の`Casks/localsub.rb`として反映する。
 8. curlとHomebrewの両方を、既存インストールのない別ユーザー領域で確認する。
 
+公開したバイナリの署名・公証と日本語動画生成は、空の証拠ディレクトリを指定して一括確認できます。
+
+```bash
+evidence_dir=$(mktemp -d /tmp/localsub-release-dogfood-parent.XXXXXX)/evidence
+./scripts/dogfood-cli-release.sh "$(command -v localsub)" "$evidence_dir" "$LOCALSUB_EXPECTED_TEAM_ID"
+```
+
+このスクリプトは非機密の合成音声fixtureを実行時に作成し、stageログ、`ffprobe`、字幕領域の
+輝度検査、contact sheet、SHA-256を保存します。Developer ID署名またはApple公証を確認できない
+バイナリは処理前に拒否します。
+
 ## 公開後の確認
 
 - GitHub ReleaseがImmutableか

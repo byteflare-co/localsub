@@ -29,6 +29,7 @@ rendered="$working_dir/rendered"
 
 /bin/sh -n "$rendered/install.sh"
 /usr/bin/ruby -c "$rendered/localsub.rb" >/dev/null
+/bin/zsh -n "$repo_dir/scripts/dogfood-cli-release.sh"
 /usr/bin/grep -q "version=\"$current_version\"" "$rendered/install.sh"
 /usr/bin/grep -q 'expected_team_id="ABCDE12345"' "$rendered/install.sh"
 /usr/bin/grep -q "sha256 \"$fake_sha\"" "$rendered/localsub.rb"
@@ -79,5 +80,10 @@ fi
   print -u2 -- "failed installer published an executable"
   exit 1
 }
+
+if "$repo_dir/scripts/dogfood-cli-release.sh" >/dev/null 2>&1; then
+  print -u2 -- "release dogfood accepted missing paths"
+  exit 1
+fi
 
 print -r -- "CLI distribution checks passed"
