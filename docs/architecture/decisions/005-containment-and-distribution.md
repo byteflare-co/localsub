@@ -12,8 +12,10 @@ JIT, unsigned executable memory, disabled library validation, and DYLD environme
 exceptions are prohibited.
 
 Developer ID builds must be signed, notarized, and stapled. CI/release verification records
-the resolved entitlements and validates the artifact with `codesign` and `spctl`. The CLI is
-development-only for v1 and is not embedded in the distributed application.
+the resolved entitlements and validates the artifact with `codesign` and `spctl`. The CLI is not
+embedded in the distributed application. It is distributed separately as source pinned by SHA-256
+and built on the user's Mac through a Homebrew Formula or verified installer; no CLI executable,
+bottle, or Cask is published.
 
 ## Model network boundary
 

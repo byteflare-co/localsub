@@ -29,26 +29,16 @@ head_sha=$(/usr/bin/git -C "$repo_dir" rev-parse HEAD)
   print -u2 -- "local tag $tag does not resolve to HEAD"
   exit 1
 }
-remote_tag_sha=$(/usr/bin/git -C "$repo_dir" ls-remote --tags origin "refs/tags/$tag" \
-  | /usr/bin/awk 'NR == 1 { print $1 }')
+remote_tag_sha=$("$repo_dir/scripts/resolve-remote-tag-commit.sh" \
+  "$repo_dir" origin "$tag")
 [[ $remote_tag_sha == $head_sha ]] || {
   print -u2 -- "remote tag $tag does not resolve to HEAD"
   exit 1
 }
 
-archive="localsub-v${version}-darwin-arm64.zip"
-for required in "$archive" SHA256SUMS install.sh localsub.rb; do
-  [[ -f "$artifact_dir/$required" && ! -L "$artifact_dir/$required" ]] || {
-    print -u2 -- "missing regular release artifact: $required"
-    exit 1
-  }
-done
-(
-  cd "$artifact_dir"
-  /usr/bin/shasum -a 256 -c SHA256SUMS
-)
-/bin/sh -n "$artifact_dir/install.sh"
-/usr/bin/ruby -c "$artifact_dir/localsub.rb" >/dev/null
+archive="localsub-v${version}-source.tar.gz"
+"$repo_dir/scripts/verify-cli-release-artifacts.sh" \
+  "$artifact_dir" "$version" "$head_sha"
 
 "$gh_path" auth status >/dev/null
 immutable=$("$gh_path" api "repos/$repository/immutable-releases" --jq .enabled)
@@ -64,6 +54,7 @@ fi
 "$gh_path" release create "$tag" \
   "$artifact_dir/$archive" \
   "$artifact_dir/SHA256SUMS" \
+  "$artifact_dir/SOURCE-METADATA.json" \
   "$artifact_dir/install.sh" \
   "$artifact_dir/localsub.rb" \
   --repo "$repository" \

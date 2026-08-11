@@ -2,8 +2,8 @@
 set -eu
 
 version="__LOCALSUB_VERSION__"
-expected_team_id="__LOCALSUB_TEAM_ID__"
-asset="localsub-v${version}-darwin-arm64.zip"
+expected_sha="__LOCALSUB_SOURCE_SHA256__"
+asset="localsub-v${version}-source.tar.gz"
 default_base_url="https://github.com/byteflare-co/localsub/releases/download/v${version}"
 release_base_url=${LOCALSUB_RELEASE_BASE_URL:-$default_base_url}
 install_dir=${LOCALSUB_INSTALL_DIR:-"${HOME}/.local/bin"}
@@ -15,12 +15,18 @@ fail() {
 
 [ "$(uname -s)" = "Darwin" ] || fail "macOS is required"
 [ "$(uname -m)" = "arm64" ] || fail "Apple Silicon (arm64) is required"
-
 macos_major=$(sw_vers -productVersion | /usr/bin/awk -F. '{ print $1 }')
 case "$macos_major" in
   ''|*[!0-9]*) fail "could not determine the macOS version" ;;
 esac
 [ "$macos_major" -ge 26 ] || fail "macOS 26 or later is required"
+/usr/bin/xcrun --find swift >/dev/null 2>&1 || fail "Xcode 26 or later is required"
+xcode_major=$(/usr/bin/xcodebuild -version 2>/dev/null \
+  | /usr/bin/awk 'NR == 1 { split($2, version, "."); print version[1] }')
+case "$xcode_major" in
+  ''|*[!0-9]*) fail "could not determine the Xcode version" ;;
+esac
+[ "$xcode_major" -ge 26 ] || fail "Xcode 26 or later is required"
 
 case "$install_dir" in
   /*) ;;
@@ -39,59 +45,52 @@ trap cleanup EXIT HUP INT TERM
 
 /usr/bin/curl -fsSL --connect-timeout 15 --max-time 300 --max-filesize 52428800 \
   "${release_base_url}/${asset}" -o "${working_dir}/${asset}"
-/usr/bin/curl -fsSL --connect-timeout 15 --max-time 60 --max-filesize 65536 \
-  "${release_base_url}/SHA256SUMS" -o "${working_dir}/SHA256SUMS"
-
-expected_sha=$(/usr/bin/awk -v file="$asset" '$2 == file { print $1 }' "${working_dir}/SHA256SUMS")
-/usr/bin/awk -v file="$asset" '$2 == file { count += 1 } END { exit count == 1 ? 0 : 1 }' \
-  "${working_dir}/SHA256SUMS" || fail "release checksum must contain exactly one archive entry"
-/usr/bin/printf '%s\n' "$expected_sha" | /usr/bin/grep -Eq '^[0-9a-f]{64}$' \
-  || fail "release checksum is missing or malformed"
 actual_sha=$(/usr/bin/shasum -a 256 "${working_dir}/${asset}" | /usr/bin/awk '{ print $1 }')
-[ "$actual_sha" = "$expected_sha" ] || fail "release checksum verification failed"
+[ "$actual_sha" = "$expected_sha" ] || fail "source archive checksum verification failed"
 
-package_dir="${working_dir}/unpacked/localsub-v${version}-darwin-arm64"
-archive_root="localsub-v${version}-darwin-arm64"
-archive_entries=$(/usr/bin/unzip -Z1 "${working_dir}/${asset}")
-entry_count=$(/usr/bin/printf '%s\n' "$archive_entries" | /usr/bin/awk 'NF { count += 1 } END { print count + 0 }')
-[ "$entry_count" -eq 4 ] || fail "archive contains unexpected entries"
-for required_entry in \
-  "${archive_root}/" \
-  "${archive_root}/localsub" \
-  "${archive_root}/LICENSE" \
-  "${archive_root}/NOTICE"
-do
-  /usr/bin/printf '%s\n' "$archive_entries" | /usr/bin/grep -Fqx "$required_entry" \
-    || fail "archive is missing ${required_entry}"
-done
-/usr/bin/unzip -q "$working_dir/$asset" -d "$working_dir/unpacked"
-downloaded_binary="${package_dir}/localsub"
-[ -f "$downloaded_binary" ] || fail "archive does not contain the localsub executable"
-[ ! -L "$downloaded_binary" ] || fail "archive executable must not be a symlink"
-[ -x "$downloaded_binary" ] || fail "archive executable is not executable"
+archive_root="localsub-v${version}"
+archive_entries=$(/usr/bin/tar -tzf "${working_dir}/${asset}") \
+  || fail "source archive could not be read"
+entry_count=$(/usr/bin/printf '%s\n' "$archive_entries" \
+  | /usr/bin/awk 'NF { count += 1 } END { print count + 0 }')
+[ "$entry_count" -gt 0 ] && [ "$entry_count" -le 5000 ] \
+  || fail "source archive contains an unsafe number of entries"
+/usr/bin/printf '%s\n' "$archive_entries" | /usr/bin/awk -v root="${archive_root}/" '
+  index($0, root) != 1 || $0 ~ /(^|\/)\.\.($|\/)/ || $0 ~ /^\// { exit 1 }
+' || fail "source archive contains an unsafe path"
+archive_listing=$(/usr/bin/tar -tvzf "${working_dir}/${asset}") \
+  || fail "source archive types could not be inspected"
+/usr/bin/printf '%s\n' "$archive_listing" \
+  | /usr/bin/awk 'substr($0, 1, 1) != "-" && substr($0, 1, 1) != "d" { exit 1 }' \
+  || fail "source archive contains a link or special file"
 
-/usr/bin/codesign --verify --strict --verbose=2 "$downloaded_binary" >/dev/null 2>&1 \
-  || fail "Apple code-signature verification failed"
-actual_team_id=$(/usr/bin/codesign -dv --verbose=4 "$downloaded_binary" 2>&1 \
-  | /usr/bin/sed -n 's/^TeamIdentifier=//p')
-[ "$actual_team_id" = "$expected_team_id" ] || fail "unexpected Apple Developer Team Identifier"
-actual_identifier=$(/usr/bin/codesign -dv --verbose=4 "$downloaded_binary" 2>&1 \
-  | /usr/bin/sed -n 's/^Identifier=//p')
-[ "$actual_identifier" = "localsub" ] || fail "unexpected Apple code-signing identifier"
-/usr/sbin/spctl --assess --type execute --verbose=2 "$downloaded_binary" >/dev/null 2>&1 \
-  || fail "Apple notarization assessment failed"
+/bin/mkdir "$working_dir/unpacked"
+/usr/bin/tar -xzf "${working_dir}/${asset}" -C "$working_dir/unpacked"
+source_dir="$working_dir/unpacked/$archive_root"
+[ -f "$source_dir/Package.swift" ] || fail "source archive does not contain Package.swift"
+if /usr/bin/find "$source_dir" -type l -print -quit | /usr/bin/grep -q .; then
+  fail "source archive must not contain symbolic links"
+fi
+extracted_kib=$(/usr/bin/du -sk "$source_dir" | /usr/bin/awk '{ print $1 }')
+[ "$extracted_kib" -le 102400 ] || fail "source archive expands beyond 100 MiB"
+
+/usr/bin/swift build --package-path "$source_dir" \
+  --scratch-path "$working_dir/swift-build" -c release --product localsub
+built_binary="$working_dir/swift-build/release/localsub"
+[ -x "$built_binary" ] || fail "Swift build did not produce the localsub executable"
+built_version=$(LOCALSUB_NO_UPDATE_CHECK=1 "$built_binary" --version 2>/dev/null || true)
+[ "$built_version" = "localsub ${version}" ] || fail "built binary failed its version check"
 
 /bin/mkdir -p "$install_dir"
 destination="${install_dir}/localsub"
 [ ! -L "$destination" ] || fail "refusing to replace a symbolic link at ${destination}"
 staged_binary=$(/usr/bin/mktemp "${install_dir}/.localsub.XXXXXX")
-/usr/bin/install -m 0755 "$downloaded_binary" "$staged_binary"
+/usr/bin/install -m 0755 "$built_binary" "$staged_binary"
 /bin/mv -f "$staged_binary" "$destination"
 staged_binary=""
 
-installed_version=$($destination --version 2>/dev/null || true)
+installed_version=$(LOCALSUB_NO_UPDATE_CHECK=1 "$destination" --version 2>/dev/null || true)
 [ "$installed_version" = "localsub ${version}" ] || fail "installed binary failed its version check"
-
 printf 'Installed localsub %s to %s\n' "$version" "$destination"
 case ":${PATH}:" in
   *":${install_dir}:"*) ;;

@@ -2,30 +2,20 @@
 set -euo pipefail
 
 repo_dir=${0:A:h:h}
-: "${LOCALSUB_SIGNING_IDENTITY:?Set LOCALSUB_SIGNING_IDENTITY to a Developer ID Application identity}"
-: "${LOCALSUB_NOTARY_PROFILE:?Set LOCALSUB_NOTARY_PROFILE to a notarytool keychain profile}"
-: "${LOCALSUB_EXPECTED_TEAM_ID:?Set LOCALSUB_EXPECTED_TEAM_ID to the 10-character Apple Developer Team ID}"
-
 output_dir=${1:-}
 [[ -n $output_dir && $output_dir == /* && $output_dir != / ]] || {
   print -u2 -- "usage: $0 /absolute/output/directory"
   exit 64
 }
-/usr/bin/printf '%s\n' "$LOCALSUB_EXPECTED_TEAM_ID" | /usr/bin/grep -Eq '^[A-Z0-9]{10}$' || {
-  print -u2 -- "LOCALSUB_EXPECTED_TEAM_ID must contain exactly 10 uppercase letters or digits"
-  exit 64
-}
 [[ $(/usr/bin/uname -m) == arm64 ]] || {
-  print -u2 -- "release builds require Apple Silicon"
+  print -u2 -- "release validation requires Apple Silicon"
   exit 1
 }
 macos_major=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F. '{ print $1 }')
 (( macos_major >= 26 )) || {
-  print -u2 -- "release builds require macOS 26 or later"
+  print -u2 -- "release validation requires macOS 26 or later"
   exit 1
 }
-
-"$repo_dir/scripts/check-cli-release-credentials.sh" >/dev/null
 
 version=$(/usr/bin/sed -n 's/.*static let current = "\([^"]*\)".*/\1/p' \
   "$repo_dir/Sources/LocalSubCLIKit/CLIParser.swift")
@@ -42,81 +32,63 @@ expected_tag="v$version"
   print -u2 -- "HEAD must have the exact tag $expected_tag"
   exit 1
 }
+if /usr/bin/git -C "$repo_dir" ls-files -s | /usr/bin/awk '$1 == "120000" { found = 1 } END { exit found ? 0 : 1 }'; then
+  print -u2 -- "release source tree must not contain symbolic links"
+  exit 1
+fi
 
 working_dir=$(/usr/bin/mktemp -d /tmp/localsub-cli-release.XXXXXX)
 cleanup() { /bin/rm -rf "$working_dir" }
 trap cleanup EXIT HUP INT TERM
 
-scratch="$working_dir/swift-build"
-/usr/bin/swift build --package-path "$repo_dir" --scratch-path "$scratch" -c release --product localsub
-binary="$scratch/release/localsub"
-[[ -x $binary ]] || { print -u2 -- "release binary was not produced"; exit 1 }
-[[ $($binary --version) == "localsub $version" ]] || {
-  print -u2 -- "release binary version does not match $version"
-  exit 1
-}
-
-/usr/bin/codesign --force --timestamp --options runtime \
-  --sign "$LOCALSUB_SIGNING_IDENTITY" "$binary"
-/usr/bin/codesign --verify --strict --verbose=2 "$binary"
-actual_team_id=$(/usr/bin/codesign -dv --verbose=4 "$binary" 2>&1 \
-  | /usr/bin/sed -n 's/^TeamIdentifier=//p')
-[[ $actual_team_id == $LOCALSUB_EXPECTED_TEAM_ID ]] || {
-  print -u2 -- "signed binary Team Identifier does not match LOCALSUB_EXPECTED_TEAM_ID"
-  exit 1
-}
-actual_identifier=$(/usr/bin/codesign -dv --verbose=4 "$binary" 2>&1 \
-  | /usr/bin/sed -n 's/^Identifier=//p')
-[[ $actual_identifier == localsub ]] || {
-  print -u2 -- "signed binary identifier is not localsub"
-  exit 1
-}
-
-package_name="localsub-v${version}-darwin-arm64"
-package_dir="$working_dir/$package_name"
-/bin/mkdir "$package_dir"
-/bin/cp -p "$binary" "$package_dir/localsub"
-/bin/cp -p "$repo_dir/LICENSE" "$repo_dir/NOTICE" "$package_dir/"
-archive="$working_dir/${package_name}.zip"
+archive_root="localsub-v${version}"
+archive="${archive_root}-source.tar.gz"
 (
-  cd "$working_dir"
-  /usr/bin/zip -X -q -r "$archive" "$package_name"
+  cd "$repo_dir"
+  /usr/bin/git archive --format=tar --prefix="${archive_root}/" "$expected_tag" \
+    | /usr/bin/gzip -n >"$working_dir/$archive"
 )
+source_sha=$(/usr/bin/shasum -a 256 "$working_dir/$archive" | /usr/bin/awk '{ print $1 }')
 
-/usr/bin/xcrun notarytool submit "$archive" \
-  --keychain-profile "$LOCALSUB_NOTARY_PROFILE" --wait
-/usr/sbin/spctl --assess --type execute --verbose=2 "$binary"
+/bin/mkdir "$working_dir/unpacked"
+/usr/bin/tar -xzf "$working_dir/$archive" -C "$working_dir/unpacked"
+source_dir="$working_dir/unpacked/$archive_root"
+/usr/bin/swift build --package-path "$source_dir" \
+  --scratch-path "$working_dir/swift-build" -c release --product localsub
+binary="$working_dir/swift-build/release/localsub"
+[[ -x $binary ]] || { print -u2 -- "source archive did not build localsub"; exit 1 }
+[[ $(LOCALSUB_NO_UPDATE_CHECK=1 "$binary" --version) == "localsub $version" ]] || {
+  print -u2 -- "source-built binary version does not match $version"
+  exit 1
+}
 
-archive_sha=$(/usr/bin/shasum -a 256 "$archive" | /usr/bin/awk '{ print $1 }')
 rendered="$working_dir/rendered"
 "$repo_dir/scripts/render-cli-distribution.sh" \
-  "$version" "$LOCALSUB_EXPECTED_TEAM_ID" "$archive_sha" "$rendered" >/dev/null
-
-checksums="$working_dir/SHA256SUMS"
+  "$version" "$source_sha" "$rendered" >/dev/null
+commit_sha=$(/usr/bin/git -C "$repo_dir" rev-parse HEAD)
+xcode_version=$(/usr/bin/xcodebuild -version | /usr/bin/tr '\n' ' ' | /usr/bin/sed 's/[[:space:]]*$//')
+/usr/bin/printf '{\n  "version": "%s",\n  "tag": "%s",\n  "commit": "%s",\n  "source_archive": "%s",\n  "source_sha256": "%s",\n  "validated_with": "%s"\n}\n' \
+  "$version" "$expected_tag" "$commit_sha" "$archive" "$source_sha" "$xcode_version" \
+  >"$working_dir/SOURCE-METADATA.json"
 (
   cd "$working_dir"
-  /usr/bin/shasum -a 256 "${package_name}.zip" "rendered/install.sh" \
-    | /usr/bin/sed 's#  rendered/#  #'
-) > "$checksums"
+  /usr/bin/shasum -a 256 "$archive" rendered/install.sh rendered/localsub.rb SOURCE-METADATA.json \
+    | /usr/bin/sed 's#  rendered/#  #' >SHA256SUMS
+)
 
 /bin/mkdir -p "$output_dir"
-for artifact in "${package_name}.zip" SHA256SUMS; do
+for artifact in "$archive" SHA256SUMS SOURCE-METADATA.json install.sh localsub.rb; do
   [[ ! -e "$output_dir/$artifact" ]] || {
     print -u2 -- "refusing to replace $output_dir/$artifact"
     exit 1
   }
 done
-for artifact in install.sh localsub.rb; do
-  [[ ! -e "$output_dir/$artifact" ]] || {
-    print -u2 -- "refusing to replace $output_dir/$artifact"
-    exit 1
-  }
-done
-
-/bin/cp -p "$archive" "$checksums" "$output_dir/"
+/bin/cp -p "$working_dir/$archive" "$working_dir/SHA256SUMS" \
+  "$working_dir/SOURCE-METADATA.json" "$output_dir/"
 /bin/cp -p "$rendered/install.sh" "$rendered/localsub.rb" "$output_dir/"
+"$repo_dir/scripts/verify-cli-release-artifacts.sh" \
+  "$output_dir" "$version" "$commit_sha" >/dev/null
 
-print -r -- "$output_dir/${package_name}.zip"
-print -r -- "$output_dir/SHA256SUMS"
-print -r -- "$output_dir/install.sh"
-print -r -- "$output_dir/localsub.rb"
+for artifact in "$archive" SHA256SUMS SOURCE-METADATA.json install.sh localsub.rb; do
+  print -r -- "$output_dir/$artifact"
+done

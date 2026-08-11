@@ -62,8 +62,8 @@ swift test --scratch-path /tmp/localsub-tests
 open .build/app/LocalSub.app
 ```
 
-The build script produces an ad-hoc signed, sandboxed local dogfood app. A distributable
-build additionally requires Developer ID signing, Hardened Runtime, notarization, and
+The build script produces an ad-hoc signed, sandboxed local dogfood app. A distributable desktop
+app additionally requires Developer ID signing, Hardened Runtime, notarization, and
 stapling; ad-hoc builds are intentionally rejected by Gatekeeper assessment. Release owners
 use `scripts/build-release.sh`, which fails closed unless the signing identity and notarytool
 keychain profile are provided, and ends with `stapler validate` plus `spctl --assess`.
@@ -76,19 +76,23 @@ Mac App Store, and release credential requirements.
 ### Install
 
 ```bash
-brew install --cask byteflare-co/tap/localsub
+brew install byteflare-co/tap/localsub
 localsub doctor
 ```
 
 Without Homebrew:
 
 ```bash
-curl -fsSL https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh | sh
+curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh
+less install.sh
+sh install.sh
 ~/.local/bin/localsub doctor
 ```
 
 GitHub does not include prereleases in `releases/latest`, so this URL is pinned to an exact version.
-LocalSub CLI supports Apple Silicon and macOS 26 or later. See
+The CLI verifies a pinned source archive and builds it locally. It does not require an Apple
+Developer Program membership, but does require Xcode 26 or later. LocalSub CLI
+supports Apple Silicon and macOS 26 or later. See
 [CLI distribution and release](cli-distribution.md) for model preparation, installer controls,
 and the release process.
 

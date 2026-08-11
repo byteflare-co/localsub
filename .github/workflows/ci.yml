@@ -28,5 +28,7 @@ jobs:
         run: swift test --scratch-path /tmp/localsub-ci-tests
       - name: Test CLI distribution scripts
         run: ./scripts/test-cli-distribution.sh
+      - name: Test Homebrew Formula lifecycle
+        run: ./scripts/test-homebrew-formula.sh
       - name: Build app bundle
         run: ./scripts/build-app.sh release

@@ -48,7 +48,8 @@ time-indexed preview, and exports both a captioned MP4 and an SRT sidecar.
    OS updates, so exact ASR reproduction is not guaranteed.
 7. **Containment:** dogfood and release app bundles use App Sandbox, Hardened Runtime,
    least-privilege user-selected file entitlements, Developer ID signing, notarization,
-   and stapling. The CLI is a development artifact and is not shipped in v1.
+   and stapling. The CLI is distributed separately as SHA-256-pinned source and built locally
+   through Homebrew or the verified installer; no CLI executable, bottle, or Cask is shipped.
 
 ## 3. System context
 

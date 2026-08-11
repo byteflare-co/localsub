@@ -63,14 +63,14 @@ open .build/app/LocalSub.app
 ```
 
 このビルドスクリプトは、アドホック署名とサンドボックスを適用したローカル検証用アプリを生成します。
-配布可能なビルドには、Developer ID署名、Hardened Runtime、公証、Staplingが追加で必要です。
+Desktopアプリの配布可能なビルドには、Developer ID署名、Hardened Runtime、公証、Staplingが追加で必要です。
 アドホック署名のビルドは、意図どおりGatekeeperの評価に合格しません。
 
 リリース担当者は`scripts/build-release.sh`を使用します。このスクリプトは署名IDまたは
 `notarytool`のキーチェーンプロファイルがなければfail-closedし、最後に`stapler validate`と
 `spctl --assess`を実行します。
 
-Apple Developer Program、Developer ID、公証、Mac App Store、リリース用認証情報の要件は
+Desktopアプリに関するApple Developer Program、Developer ID、公証、Mac App Storeの要件は
 [配布ガイド](docs/distribution.md)を参照してください。
 
 ## 開発者向けCLI
@@ -78,19 +78,23 @@ Apple Developer Program、Developer ID、公証、Mac App Store、リリース�
 ### インストール
 
 ```bash
-brew install --cask byteflare-co/tap/localsub
+brew install byteflare-co/tap/localsub
 localsub doctor
 ```
 
 Homebrewを使わない場合：
 
 ```bash
-curl -fsSL https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh | sh
+curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh
+less install.sh
+sh install.sh
 ~/.local/bin/localsub doctor
 ```
 
 プレリリースはGitHubの`releases/latest`には含まれないため、URLをバージョン固定しています。
-対応環境はApple SiliconとmacOS 26以降です。初回モデル準備、インストーラーの検証内容、
+CLIは固定されたソースアーカイブを検証し、ユーザーのMac上でビルドします。Apple Developer Programは
+不要ですが、Xcode 26以降が必要です。対応環境はApple SiliconとmacOS 26以降です。
+初回モデル準備、インストーラーの検証内容、
 リリース工程は[CLIの配布とリリース](docs/cli-distribution.md)を参照してください。
 
 ### 使い方
