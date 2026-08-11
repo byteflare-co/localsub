@@ -92,8 +92,10 @@ staged_binary=""
 installed_version=$(LOCALSUB_NO_UPDATE_CHECK=1 "$destination" --version 2>/dev/null || true)
 [ "$installed_version" = "localsub ${version}" ] || fail "installed binary failed its version check"
 printf 'Installed localsub %s to %s\n' "$version" "$destination"
-printf 'LocalSub checks GitHub Releases at most once every 24 hours for update notices.\n'
-printf 'Set LOCALSUB_NO_UPDATE_CHECK=1 to disable the metadata request.\n'
+printf 'Update checks are disabled by default. Review the disclosure, then opt in with:\n'
+printf '  localsub update-check enable --acknowledge-metadata\n'
+printf 'GitHub and network operators can observe IP, request time, and LocalSub version.\n'
+printf 'Disable again with: localsub update-check disable\n'
 case ":${PATH}:" in
   *":${install_dir}:"*) ;;
   *) printf 'Add %s to PATH, then run: localsub doctor\n' "$install_dir" ;;

@@ -88,13 +88,16 @@ required human checkpoint.
 
 ### CLI update metadata
 
-The CLI may contact the fixed GitHub Releases API endpoint at startup under ADR-007. The request
+The CLI contacts the fixed GitHub Releases API endpoint only after the user opts in under ADR-007.
+Help, version, and preference commands never contact it. The request
 contains no user media or derived content, but GitHub and network operators can observe ordinary
 connection metadata and the LocalSub version in User-Agent. Checks are limited to once per 24
-hours, time out after two seconds, reject responses above 256 KiB, and fail silently. Release tags
+hours across concurrent processes, time out after two seconds, stop streaming above 256 KiB, and
+fail silently. Release tags
 and URLs are untrusted and must pass semantic-version, draft-state, exact-host, and exact-path
 validation. The check only prints to standard error and never downloads or installs executable
-content. `LOCALSUB_NO_UPDATE_CHECK=1` disables it.
+content. Consent can be revoked with `localsub update-check disable`, while
+`LOCALSUB_NO_UPDATE_CHECK=1` temporarily suppresses it.
 
 ### Future FFmpeg or model dependencies
 

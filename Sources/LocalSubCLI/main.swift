@@ -48,7 +48,7 @@ func report(_ stage: String) {
     writeStandardError("{\"stage\":\"\(stage)\"}")
 }
 
-func reportUpdateIfAvailable() async {
+func reportUpdateIfAvailable(structuredOutput: Bool) async {
     let disabled = (ProcessInfo.processInfo.environment["LOCALSUB_NO_UPDATE_CHECK"] ?? "")
         .lowercased()
     guard !["1", "true", "yes"].contains(disabled),
@@ -71,18 +71,17 @@ func reportUpdateIfAvailable() async {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
         request.setValue("LocalSub/\(LocalSubVersion.current)", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await session.data(for: request)
+        let (bytes, response) = try await session.bytes(for: request)
         guard let http = response as? HTTPURLResponse,
               http.statusCode == 200,
               http.url == endpoint,
-              http.expectedContentLength <= 256 * 1_024,
-              data.count <= 256 * 1_024 else {
+              http.expectedContentLength < 0 || http.expectedContentLength <= 256 * 1_024 else {
             throw URLError(.badServerResponse)
         }
-        return data
+        return try await BoundedResponseData.collect(bytes, maxBytes: 256 * 1_024)
     }
     if let notice = await checker.check(currentVersion: LocalSubVersion.current) {
-        writeStandardError(notice.rendered)
+        writeStandardError(structuredOutput ? notice.progressJSON : notice.rendered)
     }
     session.invalidateAndCancel()
 }
@@ -233,7 +232,30 @@ func generate(_ options: GenerateOptions) async throws {
 
 func run() async throws {
     let command = try CLIParser.parse(Array(CommandLine.arguments.dropFirst()))
-    await reportUpdateIfAvailable()
+    let preferenceStore = UpdateCheckPreferenceStore()
+    switch command {
+    case .updateCheck(let action):
+        switch action {
+        case .enable:
+            try preferenceStore.setEnabled(true)
+            writeStandardOutput("更新確認を有効にしました。GitHub Releasesへ最大24時間に1回接続します。GitHubとネットワーク事業者はIP、時刻、LocalSubバージョンを観測できます。")
+        case .disable:
+            try preferenceStore.setEnabled(false)
+            writeStandardOutput("更新確認を無効にしました。")
+        case .status:
+            writeStandardOutput(preferenceStore.isEnabled() ? "enabled" : "disabled")
+        }
+        return
+    default:
+        if UpdateCheckPolicy.shouldRunAutomatically(
+            for: command,
+            preferenceEnabled: preferenceStore.isEnabled()
+        ) {
+            let structuredOutput: Bool
+            if case .generate = command { structuredOutput = true } else { structuredOutput = false }
+            await reportUpdateIfAvailable(structuredOutput: structuredOutput)
+        }
+    }
     switch command {
     case .help:
         writeStandardOutput(CLIHelp.text)
@@ -243,6 +265,8 @@ func run() async throws {
         try await doctor(options)
     case .setup(let options):
         try await setup(options)
+    case .updateCheck:
+        break
     case .generate(let options):
         try await generate(options)
     }

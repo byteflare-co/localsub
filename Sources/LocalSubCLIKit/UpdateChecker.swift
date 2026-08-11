@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public struct SemanticVersion: Comparable, CustomStringConvertible, Sendable {
     private enum Identifier: Comparable, Sendable {
@@ -29,7 +30,16 @@ public struct SemanticVersion: Comparable, CustomStringConvertible, Sendable {
     public init?(_ rawValue: String) {
         let version = rawValue.hasPrefix("v") ? String(rawValue.dropFirst()) : rawValue
         let withoutBuild = version.split(separator: "+", maxSplits: 1, omittingEmptySubsequences: false)
-        guard let precedence = withoutBuild.first, !precedence.isEmpty else { return nil }
+        guard let precedence = withoutBuild.first, !precedence.isEmpty,
+              withoutBuild.count <= 2 else { return nil }
+        if withoutBuild.count == 2 {
+            let values = withoutBuild[1].split(separator: ".", omittingEmptySubsequences: false)
+            guard !values.isEmpty, values.allSatisfy({ value in
+                !value.isEmpty && value.allSatisfy {
+                    $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-")
+                }
+            }) else { return nil }
+        }
         let mainAndPrerelease = precedence.split(
             separator: "-",
             maxSplits: 1,
@@ -119,10 +129,8 @@ public enum UpdateReleaseSelector {
             guard !release.draft,
                   let version = SemanticVersion(release.tagName),
                   includingPrereleases || (!(release.prerelease ?? false) && !version.isPrerelease),
-                  let url = URL(string: release.htmlURL),
-                  url.scheme == "https",
-                  url.host == "github.com",
-                  url.path == "/byteflare-co/localsub/releases/tag/\(release.tagName)" else {
+                  release.htmlURL == "https://github.com/byteflare-co/localsub/releases/tag/\(release.tagName)",
+                  let url = URL(string: release.htmlURL) else {
                 return nil
             }
             return PublishedUpdateRelease(version: version, url: url)
@@ -141,6 +149,105 @@ public struct CLIUpdateNotice: Sendable, Equatable {
         Homebrew更新: brew upgrade byteflare-co/tap/localsub
         詳細: \(releaseURL.absoluteString)
         """
+    }
+
+    public var progressJSON: String {
+        let value: [String: String] = [
+            "stage": "update-available",
+            "current_version": currentVersion,
+            "latest_version": latestVersion,
+            "release_url": releaseURL.absoluteString,
+            "upgrade_command": "brew upgrade byteflare-co/tap/localsub",
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]),
+              let json = String(data: data, encoding: .utf8) else {
+            return #"{"stage":"update-available"}"#
+        }
+        return json
+    }
+}
+
+public enum BoundedResponseData {
+    public static func collect<Bytes: AsyncSequence>(
+        _ bytes: Bytes,
+        maxBytes: Int
+    ) async throws -> Data where Bytes.Element == UInt8 {
+        precondition(maxBytes >= 0)
+        var data = Data()
+        data.reserveCapacity(min(maxBytes, 16 * 1_024))
+        for try await byte in bytes {
+            guard data.count < maxBytes else {
+                throw URLError(.dataLengthExceedsMaximum)
+            }
+            data.append(byte)
+        }
+        return data
+    }
+}
+
+public struct UpdateCheckPreferenceStore: Sendable {
+    private struct Preference: Codable {
+        let enabled: Bool
+    }
+
+    public static var defaultURL: URL {
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return root
+            .appendingPathComponent("co.byteflare.localsub", isDirectory: true)
+            .appendingPathComponent("preferences.json")
+    }
+
+    private let url: URL
+
+    public init(url: URL = UpdateCheckPreferenceStore.defaultURL) {
+        self.url = url
+    }
+
+    public func isEnabled() -> Bool {
+        guard let data = try? Data(contentsOf: url, options: [.mappedIfSafe]),
+              data.count <= 4 * 1_024,
+              let preference = try? JSONDecoder().decode(Preference.self, from: data) else {
+            return false
+        }
+        return preference.enabled
+    }
+
+    public func setEnabled(_ enabled: Bool) throws {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        let data = try JSONEncoder().encode(Preference(enabled: enabled))
+        try data.write(to: url, options: [.atomic])
+    }
+}
+
+private final class UpdateCheckFileLock {
+    private let descriptor: Int32
+
+    init?(url: URL) {
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        let descriptor = open(url.path, O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0o600)
+        guard descriptor >= 0 else { return nil }
+        var status = stat()
+        guard fstat(descriptor, &status) == 0,
+              (status.st_mode & S_IFMT) == S_IFREG,
+              flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
+            close(descriptor)
+            return nil
+        }
+        self.descriptor = descriptor
+    }
+
+    deinit {
+        flock(descriptor, LOCK_UN)
+        close(descriptor)
     }
 }
 
@@ -177,6 +284,10 @@ public actor CLIUpdateChecker {
     }
 
     public func check(currentVersion: String) async -> CLIUpdateNotice? {
+        guard let lock = UpdateCheckFileLock(
+            url: cacheURL.appendingPathExtension("lock")
+        ) else { return nil }
+        defer { _ = lock }
         let checkTime = now()
         let previous = readCache()
         if let previous {

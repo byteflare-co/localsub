@@ -25,6 +25,12 @@ final class CLIParserTests: XCTestCase {
             try CLIParser.parse(["setup"]),
             .setup(.init(language: .japanese, acceptsModelDownload: false))
         )
+        XCTAssertEqual(
+            try CLIParser.parse(["update-check", "enable", "--acknowledge-metadata"]),
+            .updateCheck(.enable)
+        )
+        XCTAssertEqual(try CLIParser.parse(["update-check", "disable"]), .updateCheck(.disable))
+        XCTAssertEqual(try CLIParser.parse(["update-check", "status"]), .updateCheck(.status))
     }
 
     func testParsesLegacyAndExplicitGenerateCommands() throws {
@@ -56,6 +62,9 @@ final class CLIParserTests: XCTestCase {
         XCTAssertThrowsError(try CLIParser.parse(["doctor", "--unknown"]))
         XCTAssertThrowsError(try CLIParser.parse(["setup", "--translation", "luna"]))
         XCTAssertThrowsError(try CLIParser.parse(["generate"]))
+        XCTAssertThrowsError(try CLIParser.parse(["update-check"]))
+        XCTAssertThrowsError(try CLIParser.parse(["update-check", "enable"]))
+        XCTAssertThrowsError(try CLIParser.parse(["update-check", "now"]))
     }
 
     func testDoctorReportFailsOnlyOnBlockingChecks() {
@@ -72,5 +81,14 @@ final class CLIParserTests: XCTestCase {
         XCTAssertTrue(ready.rendered().contains("PASS platform"))
         XCTAssertTrue(ready.rendered().contains("WARN translation"))
         XCTAssertTrue(blocked.rendered().contains("FAIL speech"))
+    }
+
+    func testUpdateCheckRequiresConsentAndNeverRunsForHelpOrVersion() throws {
+        let doctor = try CLIParser.parse(["doctor"])
+        XCTAssertFalse(UpdateCheckPolicy.shouldRunAutomatically(for: doctor, preferenceEnabled: false))
+        XCTAssertTrue(UpdateCheckPolicy.shouldRunAutomatically(for: doctor, preferenceEnabled: true))
+        XCTAssertFalse(UpdateCheckPolicy.shouldRunAutomatically(for: .help, preferenceEnabled: true))
+        XCTAssertFalse(UpdateCheckPolicy.shouldRunAutomatically(for: .version, preferenceEnabled: true))
+        XCTAssertFalse(UpdateCheckPolicy.shouldRunAutomatically(for: .updateCheck(.status), preferenceEnabled: true))
     }
 }
