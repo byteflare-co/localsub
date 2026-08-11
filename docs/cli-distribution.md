@@ -16,7 +16,7 @@ localsub doctor
 Homebrewを使わない場合は、バージョン固定Immutable Releaseのインストーラーを確認して実行します。
 
 ```bash
-curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh
+curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.2/install.sh
 less install.sh
 sh install.sh
 ~/.local/bin/localsub doctor
@@ -63,7 +63,7 @@ FormulaではHomebrewの外側sandbox内でSwiftPMの入れ子sandboxがmacOS 26
 
 ```bash
 ./scripts/publish-cli-release.sh "$release_dir" \
-  "$PWD/docs/releases/v0.1.0-alpha.1.md"
+  "$PWD/docs/releases/v0.1.0-alpha.2.md"
 ```
 
 6. 検証済みFormulaをcleanな`byteflare-co/homebrew-tap` checkoutへbyte-for-byteでstageし、
@@ -71,7 +71,7 @@ FormulaではHomebrewの外側sandbox内でSwiftPMの入れ子sandboxがmacOS 26
 
 ```bash
 ./scripts/stage-homebrew-formula.sh "$release_dir" /absolute/path/to/homebrew-tap \
-  0.1.0-alpha.1 "$(git rev-parse HEAD)"
+  0.1.0-alpha.2 "$(git rev-parse HEAD)"
 ```
 
 tap側のPR CIでも`brew style`、`brew audit`、source build、`brew test`を必須にする。

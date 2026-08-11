@@ -2,7 +2,7 @@ import Foundation
 import LocalSubCore
 
 public enum LocalSubVersion {
-    public static let current = "0.1.0-alpha.1"
+    public static let current = "0.1.0-alpha.2"
 }
 
 public struct GenerateOptions: Sendable, Equatable {

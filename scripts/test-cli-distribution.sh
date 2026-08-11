@@ -47,6 +47,8 @@ fi
 /usr/bin/grep -q 'depends_on macos: :tahoe' "$rendered/localsub.rb"
 /usr/bin/grep -q 'swift.*build' "$rendered/localsub.rb"
 /usr/bin/grep -q 'LOCALSUB_NO_UPDATE_CHECK=1' "$rendered/install.sh" "$rendered/localsub.rb"
+[[ $(/usr/bin/grep -c '^  def install$' "$rendered/localsub.rb") -eq 1 ]]
+[[ $(/usr/bin/grep -c '^  def caveats$' "$rendered/localsub.rb") -eq 1 ]]
 if /usr/bin/grep -q '__LOCALSUB_' "$rendered/install.sh" "$rendered/localsub.rb"; then
   print -u2 -- "rendered distribution contains an unresolved placeholder"
   exit 1

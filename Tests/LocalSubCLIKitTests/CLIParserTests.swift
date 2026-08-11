@@ -9,7 +9,7 @@ final class CLIParserTests: XCTestCase {
         XCTAssertEqual(try CLIParser.parse(["-h"]), .help)
         XCTAssertEqual(try CLIParser.parse(["version"]), .version)
         XCTAssertEqual(try CLIParser.parse(["--version"]), .version)
-        XCTAssertEqual(LocalSubVersion.current, "0.1.0-alpha.1")
+        XCTAssertEqual(LocalSubVersion.current, "0.1.0-alpha.2")
     }
 
     func testParsesDoctorAndSetupCommands() throws {

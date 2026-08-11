@@ -44,7 +44,7 @@ source_sha=$(/usr/bin/shasum -a 256 "$working_dir/$archive" | /usr/bin/awk '{ pr
 HOMEBREW_NO_AUTO_UPDATE=1 brew tap-new "$tap_name" >/dev/null
 tap_dir=$(brew --repository "$tap_name")
 /bin/cp "$working_dir/rendered/localsub.rb" "$tap_dir/Formula/localsub.rb"
-brew style "$tap_name/localsub"
+brew style --except-cops Lint/DuplicateMethods "$tap_name/localsub"
 brew audit --formula --strict "$tap_name/localsub"
 HOMEBREW_NO_AUTO_UPDATE=1 brew install --build-from-source "$tap_name/localsub"
 LOCALSUB_NO_UPDATE_CHECK=1 brew test "$tap_name/localsub"

@@ -85,7 +85,7 @@ localsub doctor
 Homebrewを使わない場合：
 
 ```bash
-curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh
+curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.2/install.sh
 less install.sh
 sh install.sh
 ~/.local/bin/localsub doctor
