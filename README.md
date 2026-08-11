@@ -1,7 +1,29 @@
-# LocalSub
+<p align="center">
+  <img src="Config/LocalSub-AppIcon.png" width="160" alt="LocalSub app icon">
+</p>
 
-LocalSub is a privacy-first macOS desktop application that turns Japanese or English
-speech in a video into editable Japanese captions and exports a new captioned video.
+<h1 align="center">LocalSub</h1>
+
+<p align="center">
+  Privacy-first Japanese subtitles for video, built for Apple Silicon.
+</p>
+
+<p align="center">
+  <img alt="macOS 26 or later" src="https://img.shields.io/badge/macOS-26%2B-111827?logo=apple">
+  <img alt="Swift 6.2" src="https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white">
+  <img alt="Apple Silicon" src="https://img.shields.io/badge/Apple%20Silicon-native-2563EB">
+  <img alt="Local-first" src="https://img.shields.io/badge/processing-local--first-06B6D4">
+</p>
+
+<p align="center">
+  <a href="#build-and-test">Build</a> ·
+  <a href="docs/architecture/software-design.md">Architecture</a> ·
+  <a href="docs/security/threat-model.md">Threat model</a> ·
+  <a href="SECURITY.md">Security</a>
+</p>
+
+LocalSub is a macOS desktop application that turns Japanese or English speech in a video
+into editable Japanese captions and exports a new captioned video.
 
 The product is intentionally local-first. Its first supported product slice targets
 Apple Silicon Macs running macOS 26 or later and accepts SDR MP4/MOV files that
