@@ -1,5 +1,26 @@
 # Security policy and invariants
 
+## Supported versions
+
+LocalSub has not published a stable binary release yet. Security fixes currently target the latest
+commit on `main`. Once versioned releases begin, this section will list supported release lines.
+
+## Reporting a vulnerability
+
+Use [GitHub private vulnerability reporting](https://github.com/byteflare-co/localsub/security/advisories/new).
+Do not open a public issue, pull request, or discussion containing exploit details.
+
+Include the affected commit or version, impact, reproduction conditions, and the smallest safe
+proof of concept. Do not submit private media, real transcripts, API keys, signing certificates,
+notarization credentials, or unrelated personal data. Maintainers will acknowledge a complete
+report as soon as practical, coordinate remediation and disclosure with the reporter, and credit
+the reporter unless anonymity is requested.
+
+This process is for vulnerabilities in LocalSub. Translation quality problems and correctly
+rejected malformed input belong in normal bug reports unless they cross a security boundary.
+
+## Security design
+
 LocalSub processes untrusted local media and potentially sensitive speech. Security issues
 include arbitrary code execution through media parsing, unintended disclosure of transcript
 content, path traversal or overwrite, unbounded resource consumption, unsafe subprocess use,

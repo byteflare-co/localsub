@@ -13,13 +13,17 @@
   <img alt="Swift 6.2" src="https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white">
   <img alt="Apple Silicon" src="https://img.shields.io/badge/Apple%20Silicon-native-2563EB">
   <img alt="Local-first" src="https://img.shields.io/badge/processing-local--first-06B6D4">
+  <a href="LICENSE"><img alt="Apache License 2.0" src="https://img.shields.io/badge/license-Apache--2.0-0B7285"></a>
 </p>
 
 <p align="center">
   <a href="#build-and-test">Build</a> ·
   <a href="docs/architecture/software-design.md">Architecture</a> ·
   <a href="docs/security/threat-model.md">Threat model</a> ·
-  <a href="SECURITY.md">Security</a>
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="GOVERNANCE.md">Governance</a> ·
+  <a href="SECURITY.md">Security</a> ·
+  <a href="LICENSE">License</a>
 </p>
 
 LocalSub is a macOS desktop application that turns Japanese or English speech in a video
@@ -28,6 +32,10 @@ into editable Japanese captions and exports a new captioned video.
 The product is intentionally local-first. Its first supported product slice targets
 Apple Silicon Macs running macOS 26 or later and accepts SDR MP4/MOV files that
 AVFoundation can decode.
+
+> [!IMPORTANT]
+> LocalSub is under active development. The repository does not yet publish an official signed
+> binary release. Local builds are for development and dogfooding.
 
 ## Repository layout
 
@@ -60,6 +68,9 @@ stapling; ad-hoc builds are intentionally rejected by Gatekeeper assessment. Rel
 use `scripts/build-release.sh`, which fails closed unless the signing identity and notarytool
 keychain profile are provided, and ends with `stapler validate` plus `spctl --assess`.
 
+See [Distribution](docs/distribution.md) for Apple Developer Program, Developer ID, notarization,
+Mac App Store, and release credential requirements.
+
 ## Developer CLI
 
 ```bash
@@ -84,3 +95,20 @@ of up to 24 hours. Apple Translation remains available for an entirely local tra
 The desktop app supports editable two-line cues, burned-in MP4 output, and a separate UTF-8
 SRT save action. MP4 export asks for a destination folder so the sandbox can safely stage and
 atomically publish the fixed output filename. Existing output files are not silently replaced.
+
+## Contributing and support
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request,
+use the structured issue templates for bugs and features, and follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Project decision-making is described in
+[GOVERNANCE.md](GOVERNANCE.md). For support boundaries, see [SUPPORT.md](SUPPORT.md).
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md); never attach private
+media, transcripts, credentials, or signing materials to a public issue.
+
+## License
+
+LocalSub is licensed under the [Apache License 2.0](LICENSE). Copyright 2026 株式会社Byteflare.
+Commercial use, modification, and redistribution are permitted subject to the license terms.
+The license does not grant rights to the LocalSub or 株式会社Byteflare names or branding beyond
+reasonable attribution.
