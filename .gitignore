@@ -1,0 +1,13 @@
+.build/
+.swiftpm/
+.DS_Store
+*.xcresult
+DerivedData/
+tmp/e2e-runs/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
