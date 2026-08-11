@@ -1,60 +1,60 @@
 <p align="center">
-  <img src="Config/LocalSub-AppIcon.png" width="160" alt="LocalSub app icon">
+  <img src="Config/LocalSub-AppIcon.png" width="160" alt="LocalSub アプリアイコン">
 </p>
 
 <h1 align="center">LocalSub</h1>
 
 <p align="center">
-  Privacy-first Japanese subtitles for video, built for Apple Silicon.
+  Apple Silicon向け、プライバシー重視の動画用日本語字幕アプリ。
 </p>
 
 <p align="center">
-  <img alt="macOS 26 or later" src="https://img.shields.io/badge/macOS-26%2B-111827?logo=apple">
+  <img alt="macOS 26以降" src="https://img.shields.io/badge/macOS-26%2B-111827?logo=apple">
   <img alt="Swift 6.2" src="https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white">
   <img alt="Apple Silicon" src="https://img.shields.io/badge/Apple%20Silicon-native-2563EB">
-  <img alt="Local-first" src="https://img.shields.io/badge/processing-local--first-06B6D4">
+  <img alt="ローカルファースト" src="https://img.shields.io/badge/processing-local--first-06B6D4">
   <a href="LICENSE"><img alt="Apache License 2.0" src="https://img.shields.io/badge/license-Apache--2.0-0B7285"></a>
 </p>
 
 <p align="center">
-  <a href="#build-and-test">Build</a> ·
-  <a href="docs/architecture/software-design.md">Architecture</a> ·
-  <a href="docs/security/threat-model.md">Threat model</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a> ·
-  <a href="GOVERNANCE.md">Governance</a> ·
-  <a href="SECURITY.md">Security</a> ·
-  <a href="LICENSE">License</a>
+  <a href="docs/README.en.md">English</a> ·
+  <a href="#ビルドとテスト">ビルド</a> ·
+  <a href="docs/architecture/software-design.md">アーキテクチャ</a> ·
+  <a href="docs/security/threat-model.md">脅威モデル</a> ·
+  <a href="CONTRIBUTING.md">コントリビューション</a> ·
+  <a href="GOVERNANCE.md">ガバナンス</a> ·
+  <a href="SECURITY.md">セキュリティ</a> ·
+  <a href="LICENSE">ライセンス</a>
 </p>
 
-LocalSub is a macOS desktop application that turns Japanese or English speech in a video
-into editable Japanese captions and exports a new captioned video.
+LocalSubは、動画内の日本語または英語の音声を編集可能な日本語字幕へ変換し、
+字幕付きの新しい動画として書き出すmacOSデスクトップアプリです。
 
-The product is intentionally local-first. Its first supported product slice targets
-Apple Silicon Macs running macOS 26 or later and accepts SDR MP4/MOV files that
-AVFoundation can decode.
+プライバシーを重視したローカルファースト設計を採用しています。最初の対応範囲は、
+macOS 26以降を搭載したApple Silicon Macと、AVFoundationでデコード可能なSDRの
+MP4／MOVファイルです。
 
 > [!IMPORTANT]
-> LocalSub is under active development. The repository does not yet publish an official signed
-> binary release. Local builds are for development and dogfooding.
+> LocalSubは現在開発中です。公式に署名されたバイナリリリースはまだ公開していません。
+> ローカルビルドは開発とドッグフーディングを目的としています。
 
-## Repository layout
+## リポジトリ構成
 
-- `Sources/LocalSubCore`: deterministic domain logic and provider contracts
-- `Sources/LocalSubApple`: Apple Speech, Translation, and AVFoundation adapters
-- `Sources/LocalSubCloud`: optional bounded GPT-5.6 Luna text translation adapter
-- `Sources/LocalSubCLI`: developer and dogfooding CLI
-- `Sources/LocalSubApp`: SwiftUI desktop application
-- `Tests`: TDD unit and integration tests
-- `docs/architecture`: design and architecture decisions
-- `docs/security`: repository threat model
-- `docs/qa`: dogfooding inventory and manual verification assets
+- `Sources/LocalSubCore`: 決定論的なドメインロジックとプロバイダー契約
+- `Sources/LocalSubApple`: Apple Speech、Translation、AVFoundationのアダプター
+- `Sources/LocalSubCloud`: 任意で利用できる、制限付きGPT-5.6 Lunaテキスト翻訳アダプター
+- `Sources/LocalSubCLI`: 開発・ドッグフーディング用CLI
+- `Sources/LocalSubApp`: SwiftUIデスクトップアプリ
+- `Tests`: TDDによるユニットテストと統合テスト
+- `docs/architecture`: 設計およびアーキテクチャ決定記録
+- `docs/security`: リポジトリの脅威モデル
+- `docs/qa`: ドッグフーディング項目と手動検証用アセット
 
-See [software-design.md](docs/architecture/software-design.md) for the authoritative
-design.
+正式な設計は[software-design.md](docs/architecture/software-design.md)を参照してください。
 
-## Build and test
+## ビルドとテスト
 
-LocalSub requires Apple Silicon, macOS 26, and Xcode 26 or later.
+LocalSubの開発には、Apple Silicon、macOS 26、Xcode 26以降が必要です。
 
 ```bash
 swift test --scratch-path /tmp/localsub-tests
@@ -62,53 +62,55 @@ swift test --scratch-path /tmp/localsub-tests
 open .build/app/LocalSub.app
 ```
 
-The build script produces an ad-hoc signed, sandboxed local dogfood app. A distributable
-build additionally requires Developer ID signing, Hardened Runtime, notarization, and
-stapling; ad-hoc builds are intentionally rejected by Gatekeeper assessment. Release owners
-use `scripts/build-release.sh`, which fails closed unless the signing identity and notarytool
-keychain profile are provided, and ends with `stapler validate` plus `spctl --assess`.
+このビルドスクリプトは、アドホック署名とサンドボックスを適用したローカル検証用アプリを生成します。
+配布可能なビルドには、Developer ID署名、Hardened Runtime、公証、Staplingが追加で必要です。
+アドホック署名のビルドは、意図どおりGatekeeperの評価に合格しません。
 
-See [Distribution](docs/distribution.md) for Apple Developer Program, Developer ID, notarization,
-Mac App Store, and release credential requirements.
+リリース担当者は`scripts/build-release.sh`を使用します。このスクリプトは署名IDまたは
+`notarytool`のキーチェーンプロファイルがなければfail-closedし、最後に`stapler validate`と
+`spctl --assess`を実行します。
 
-## Developer CLI
+Apple Developer Program、Developer ID、公証、Mac App Store、リリース用認証情報の要件は
+[配布ガイド](docs/distribution.md)を参照してください。
+
+## 開発者向けCLI
 
 ```bash
 swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
   --output captioned.mp4 --language japanese
 ```
 
-Use `--language english` for English speech. Apple Translation is the default and only uses
-already installed models. `--translation luna` explicitly selects GPT-5.6 Luna and requires an
-`OPENAI_API_KEY` injected into that process; `--glossary terms.txt` accepts up to 32 KiB of
-`source=日本語` entries. Luna CLI runs also require `--acknowledge-luna-data-transfer` after reading
-the disclosure printed by the command. Never commit the key. Progress is emitted as one JSON object
-per line on standard error.
+英語音声には`--language english`を指定します。標準のApple Translationは、すでにインストール済みの
+モデルだけを使用します。`--translation luna`を指定するとGPT-5.6 Lunaを明示的に選択でき、
+そのプロセスへ`OPENAI_API_KEY`を注入する必要があります。`--glossary terms.txt`には最大32 KiBの
+`source=日本語`形式の用語を指定できます。
 
-The Desktop app can store its OpenAI key in the local, non-synchronizing macOS Keychain. Luna
-mode asks for confirmation on every generation and sends only the on-device English transcript
-units and glossary—not video, audio, paths, or filenames. Requests set `store: false` to avoid
-default Response-object storage. Unless the API organization/project has applicable data controls,
-OpenAI documents separate abuse-monitoring retention of up to 30 days and encrypted prompt caching
-of up to 24 hours. Apple Translation remains available for an entirely local translation path.
+LunaをCLIで使用する場合は、コマンドが表示するデータ送信の説明を読んだうえで、
+`--acknowledge-luna-data-transfer`も指定する必要があります。APIキーは絶対にコミットしないでください。
+進捗は標準エラー出力へ、1行につき1つのJSONオブジェクトとして出力されます。
 
-The desktop app supports editable two-line cues, burned-in MP4 output, and a separate UTF-8
-SRT save action. MP4 export asks for a destination folder so the sandbox can safely stage and
-atomically publish the fixed output filename. Existing output files are not silently replaced.
+デスクトップアプリはOpenAI APIキーを、同期されないローカルのmacOS Keychainへ保存できます。
+Lunaモードは生成のたびに確認を求め、端末内で生成した英語の文字起こし単位と用語集だけを送信します。
+動画、音声、パス、ファイル名は送信しません。リクエストでは`store: false`を指定し、Responseオブジェクトの
+標準保存を無効化します。APIの組織・プロジェクトに該当するデータ制御がない場合、OpenAIは別途、
+不正利用監視用データを最大30日、暗号化されたプロンプトキャッシュを最大24時間保持すると説明しています。
+完全にローカルで翻訳したい場合は、Apple Translationを利用できます。
 
-## Contributing and support
+デスクトップアプリでは、2行字幕の編集、字幕を焼き込んだMP4の書き出し、UTF-8 SRTの個別保存ができます。
+MP4の書き出し時は、サンドボックス内で安全にステージングし、固定された出力ファイル名をアトミックに
+公開するため、保存先フォルダを選択します。既存ファイルを暗黙に上書きすることはありません。
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request,
-use the structured issue templates for bugs and features, and follow the
-[Code of Conduct](CODE_OF_CONDUCT.md). Project decision-making is described in
-[GOVERNANCE.md](GOVERNANCE.md). For support boundaries, see [SUPPORT.md](SUPPORT.md).
+## コントリビューションとサポート
 
-Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md); never attach private
-media, transcripts, credentials, or signing materials to a public issue.
+コントリビューションを歓迎します。Pull Requestを作成する前に[CONTRIBUTING.md](CONTRIBUTING.md)を読み、
+バグや機能提案には所定のIssueテンプレートを使用し、[行動規範](CODE_OF_CONDUCT.md)を守ってください。
+意思決定の方法は[GOVERNANCE.md](GOVERNANCE.md)、サポート範囲は[SUPPORT.md](SUPPORT.md)に記載しています。
 
-## License
+脆弱性は[SECURITY.md](SECURITY.md)に従って非公開で報告してください。公開Issueには、非公開の動画、
+文字起こし、認証情報、署名関連ファイルを添付しないでください。
 
-LocalSub is licensed under the [Apache License 2.0](LICENSE). Copyright 2026 株式会社Byteflare.
-Commercial use, modification, and redistribution are permitted subject to the license terms.
-The license does not grant rights to the LocalSub or 株式会社Byteflare names or branding beyond
-reasonable attribution.
+## ライセンス
+
+LocalSubは[Apache License 2.0](LICENSE)で公開しています。Copyright 2026 株式会社Byteflare。
+ライセンス条件に従い、商用利用、変更、再配布が可能です。合理的な帰属表示を除き、LocalSubまたは
+株式会社Byteflareの名称・ブランドを使用する権利は付与されません。
