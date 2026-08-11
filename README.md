@@ -75,10 +75,32 @@ Apple Developer Program、Developer ID、公証、Mac App Store、リリース�
 
 ## 開発者向けCLI
 
+### インストール
+
+```bash
+brew install --cask byteflare-co/tap/localsub
+localsub doctor
+```
+
+Homebrewを使わない場合：
+
+```bash
+curl -fsSL https://github.com/byteflare-co/localsub/releases/latest/download/install.sh | sh
+~/.local/bin/localsub doctor
+```
+
+対応環境はApple SiliconとmacOS 26以降です。初回モデル準備、インストーラーの検証内容、
+リリース工程は[CLIの配布とリリース](docs/cli-distribution.md)を参照してください。
+
+### 使い方
+
 ```bash
 swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
   --output captioned.mp4 --language japanese
 ```
+
+初回利用前に`localsub doctor`を実行してください。Speechモデルがなければ、表示内容を確認してから
+`localsub setup --language japanese --accept-model-download`で準備できます。
 
 英語音声には`--language english`を指定します。標準のApple Translationは、すでにインストール済みの
 モデルだけを使用します。`--translation luna`を指定するとGPT-5.6 Lunaを明示的に選択でき、

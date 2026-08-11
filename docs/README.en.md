@@ -73,10 +73,33 @@ Mac App Store, and release credential requirements.
 
 ## Developer CLI
 
+### Install
+
+```bash
+brew install --cask byteflare-co/tap/localsub
+localsub doctor
+```
+
+Without Homebrew:
+
+```bash
+curl -fsSL https://github.com/byteflare-co/localsub/releases/latest/download/install.sh | sh
+~/.local/bin/localsub doctor
+```
+
+LocalSub CLI supports Apple Silicon and macOS 26 or later. See
+[CLI distribution and release](cli-distribution.md) for model preparation, installer controls,
+and the release process.
+
+### Usage
+
 ```bash
 swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
   --output captioned.mp4 --language japanese
 ```
+
+Run `localsub doctor` before the first video. If the Speech model is missing, review the disclosure
+and run `localsub setup --language japanese --accept-model-download` to prepare it.
 
 Use `--language english` for English speech. Apple Translation is the default and only uses
 already installed models. `--translation luna` explicitly selects GPT-5.6 Luna and requires an

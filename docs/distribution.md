@@ -3,6 +3,9 @@
 LocalSub's source code is open source under Apache-2.0. Distributing an official macOS binary is a
 separate release and trust process.
 
+The desktop app and CLI use separate packaging workflows. See [CLI distribution](cli-distribution.md)
+for the versioned GitHub Release, Homebrew Cask, and verified curl installer.
+
 ## Current state
 
 `scripts/build-app.sh` creates an ad-hoc signed app for local development. It is intentionally not
