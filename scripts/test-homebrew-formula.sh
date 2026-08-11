@@ -53,6 +53,6 @@ LOCALSUB_NO_UPDATE_CHECK=1 brew test "$tap_name/localsub"
   revision 1' "$tap_dir/Formula/localsub.rb"
 HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade --build-from-source "$tap_name/localsub"
 LOCALSUB_NO_UPDATE_CHECK=1 brew test "$tap_name/localsub"
-brew uninstall localsub
+brew uninstall --force localsub
 brew untap "$tap_name"
 print -r -- "Homebrew Formula install, test, upgrade, and uninstall passed"
