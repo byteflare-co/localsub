@@ -23,6 +23,10 @@ class Localsub < Formula
     <<~EOS
       Run `localsub doctor` before processing the first video.
       Apple Speech and Translation model assets are managed separately by macOS.
+      Update checks are disabled by default. To opt in after reviewing the disclosure, run:
+        localsub update-check enable --acknowledge-metadata
+      GitHub and network operators can observe IP, request time, and LocalSub version.
+      Disable again with `localsub update-check disable`.
     EOS
   end
 

@@ -24,7 +24,7 @@ ffprobe_path=$(command -v ffprobe || true)
 fixture="$evidence_dir/fixtures/ja.mp4"
 output="$evidence_dir/output/ja-captioned.mp4"
 
-installed_version=$("$binary_path" --version)
+installed_version=$(LOCALSUB_NO_UPDATE_CHECK=1 "$binary_path" --version)
 expected_version=$(/usr/bin/sed -n 's/.*static let current = "\([^"]*\)".*/\1/p' \
   "$repo_dir/Sources/LocalSubCLIKit/CLIParser.swift")
 [[ $installed_version == "localsub $expected_version" ]] || {

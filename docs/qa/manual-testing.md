@@ -9,7 +9,7 @@ manual-testing スキルが LocalSub を検証するためのプロジェクト�
 |---|---|
 | 通常起動 | `./scripts/build-app.sh && open .build/app/LocalSub.app` |
 | 無人/AI検証向け起動 | `swift run --scratch-path /tmp/localsub-cli localsub INPUT --output OUTPUT --language japanese` |
-| 主要エンドポイント | アプリ固有サーバーなし。Luna選択時だけ `POST https://api.openai.com/v1/responses` |
+| 主要エンドポイント | `localsub update-check enable --acknowledge-metadata`で同意した後の通常起動時だけ、最大24時間に1回 `GET https://api.github.com/repos/byteflare-co/localsub/releases?per_page=20`。Luna選択・同意時だけ `POST https://api.openai.com/v1/responses` |
 | 健全性確認 | `swift test --scratch-path /tmp/localsub-tests`、`codesign --verify --deep --strict .build/app/LocalSub.app` |
 | 対象環境 | Apple Silicon、macOS 26以降、Xcode 26以降 |
 | 環境の癖 | Documents 配下では SwiftPM の `build.db` I/O error が出ることがあるため、scratch path は `/tmp` を使う。Apple Speech/Translation のモデル導入状態は端末依存 |
@@ -36,6 +36,7 @@ Luna通信は、テスト用API projectのkeyを `op-cached` から対象process
 |---|---|---|
 | ローカルディレクトリ | `tmp/e2e-runs/<RUN_ID>/` | 合成入力、出力、スクリーンショット、ログ |
 | HTTPS | `https://api.openai.com/v1/responses` | 同意済みLuna runの英文翻訳だけ |
+| HTTPS | `https://api.github.com/repos/byteflare-co/localsub/releases?per_page=20` | 明示的に有効化したCLIのバージョン通知。media由来情報なし。`update-check disable`で同意撤回 |
 
 ## 手順書
 

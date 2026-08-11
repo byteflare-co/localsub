@@ -85,7 +85,7 @@ localsub doctor
 Homebrewを使わない場合：
 
 ```bash
-curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh
+curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.2/install.sh
 less install.sh
 sh install.sh
 ~/.local/bin/localsub doctor
@@ -106,6 +106,13 @@ swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
 
 初回利用前に`localsub doctor`を実行してください。Speechモデルがなければ、表示内容を確認してから
 `localsub setup --language japanese --accept-model-download`で準備できます。
+
+更新確認は既定で無効です。接続先と送信内容を確認し、利用者が
+`localsub update-check enable --acknowledge-metadata`を実行した場合だけ、通常コマンドの起動時に最大24時間に1回
+GitHub Releasesを確認します。動画・音声・字幕・パス・ファイル名は送信せず、自動更新もしません。
+GitHubとネットワーク事業者からは、通常の接続情報（IP、時刻、接続先）とLocalSubバージョンを観測できます。
+`--help`と`--version`は常に通信しません。`localsub update-check disable`で再び無効化でき、
+`LOCALSUB_NO_UPDATE_CHECK=1`で有効な設定を一時停止できます。
 
 英語音声には`--language english`を指定します。標準のApple Translationは、すでにインストール済みの
 モデルだけを使用します。`--translation luna`を指定するとGPT-5.6 Lunaを明示的に選択でき、

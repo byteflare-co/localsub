@@ -2,7 +2,7 @@ import Foundation
 import LocalSubCore
 
 public enum LocalSubVersion {
-    public static let current = "0.1.0-alpha.1"
+    public static let current = "0.1.0-alpha.2"
 }
 
 public struct GenerateOptions: Sendable, Equatable {
@@ -50,12 +50,34 @@ public struct SetupOptions: Sendable, Equatable {
     }
 }
 
+public enum UpdateCheckAction: Sendable, Equatable {
+    case enable
+    case disable
+    case status
+}
+
 public enum CLICommand: Sendable, Equatable {
     case help
     case version
     case doctor(DoctorOptions)
     case setup(SetupOptions)
+    case updateCheck(UpdateCheckAction)
     case generate(GenerateOptions)
+}
+
+public enum UpdateCheckPolicy {
+    public static func shouldRunAutomatically(
+        for command: CLICommand,
+        preferenceEnabled: Bool
+    ) -> Bool {
+        guard preferenceEnabled else { return false }
+        switch command {
+        case .doctor, .setup, .generate:
+            return true
+        case .help, .version, .updateCheck:
+            return false
+        }
+    }
 }
 
 public enum CLIParseError: Error, LocalizedError, Equatable {
@@ -80,6 +102,17 @@ public enum CLIParser {
             return .doctor(try parseDoctor(Array(arguments.dropFirst())))
         case "setup":
             return .setup(try parseSetup(Array(arguments.dropFirst())))
+        case "update-check":
+            switch Array(arguments.dropFirst()) {
+            case ["enable", "--acknowledge-metadata"]:
+                return .updateCheck(.enable)
+            case ["disable"]:
+                return .updateCheck(.disable)
+            case ["status"]:
+                return .updateCheck(.status)
+            default:
+                throw CLIParseError.invalidArguments
+            }
         case "generate":
             return .generate(try parseGenerate(Array(arguments.dropFirst())))
         default:
@@ -197,6 +230,8 @@ public enum CLIHelp {
       localsub generate INPUT --output OUTPUT.mp4 [OPTIONS]
       localsub doctor [--language japanese|english] [--translation apple|luna]
       localsub setup [--language japanese|english] --accept-model-download
+      localsub update-check enable --acknowledge-metadata
+      localsub update-check disable|status
       localsub --version
       localsub --help
 
@@ -209,6 +244,15 @@ public enum CLIHelp {
     REQUIREMENTS
       Apple Silicon, macOS 26 or later, and an installed Apple Speech model.
       Run 'localsub doctor' before the first video.
+
+    UPDATE CHECK
+      Disabled until you opt in with:
+        localsub update-check enable --acknowledge-metadata
+      Once enabled, LocalSub checks GitHub Releases at most once every 24 hours.
+      GitHub and network operators can observe IP, request time, and LocalSub version.
+      No media, transcript, caption, glossary, path, filename, or API key is sent.
+      Help and version commands never access the network. LOCALSUB_NO_UPDATE_CHECK=1
+      temporarily disables an enabled check.
     """
 }
 

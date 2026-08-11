@@ -83,7 +83,7 @@ localsub doctor
 Without Homebrew:
 
 ```bash
-curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.1/install.sh
+curl -fsSLO https://github.com/byteflare-co/localsub/releases/download/v0.1.0-alpha.2/install.sh
 less install.sh
 sh install.sh
 ~/.local/bin/localsub doctor
@@ -105,6 +105,14 @@ swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
 
 Run `localsub doctor` before the first video. If the Speech model is missing, review the disclosure
 and run `localsub setup --language japanese --accept-model-download` to prepare it.
+
+Update checks are disabled by default. After reviewing the destination and disclosed metadata,
+opt in with `localsub update-check enable --acknowledge-metadata`. Normal commands then check GitHub Releases at most
+once every 24 hours and only print a notice when a newer version exists. No video, audio, captions,
+paths, or filenames are sent, and updates are never installed automatically. GitHub and network
+operators can observe normal connection metadata and the LocalSub version. `--help` and
+`--version` never use the network. Run `localsub update-check disable` to opt out again, or set
+`LOCALSUB_NO_UPDATE_CHECK=1` to suspend an enabled check for one process.
 
 Use `--language english` for English speech. Apple Translation is the default and only uses
 already installed models. `--translation luna` explicitly selects GPT-5.6 Luna and requires an

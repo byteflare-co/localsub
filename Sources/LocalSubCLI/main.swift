@@ -24,6 +24,18 @@ enum CLIRuntimeError: Error, LocalizedError {
     }
 }
 
+final class UpdateRedirectRejectingDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+}
+
 func writeStandardOutput(_ value: String) {
     FileHandle.standardOutput.write(Data("\(value)\n".utf8))
 }
@@ -34,6 +46,44 @@ func writeStandardError(_ value: String) {
 
 func report(_ stage: String) {
     writeStandardError("{\"stage\":\"\(stage)\"}")
+}
+
+func reportUpdateIfAvailable(structuredOutput: Bool) async {
+    let disabled = (ProcessInfo.processInfo.environment["LOCALSUB_NO_UPDATE_CHECK"] ?? "")
+        .lowercased()
+    guard !["1", "true", "yes"].contains(disabled),
+          let endpoint = URL(string:
+            "https://api.github.com/repos/byteflare-co/localsub/releases?per_page=20"
+          ) else { return }
+
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.timeoutIntervalForRequest = 2
+    configuration.timeoutIntervalForResource = 2
+    configuration.waitsForConnectivity = false
+    let session = URLSession(
+        configuration: configuration,
+        delegate: UpdateRedirectRejectingDelegate(),
+        delegateQueue: nil
+    )
+    let checker = CLIUpdateChecker {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        request.setValue("LocalSub/\(LocalSubVersion.current)", forHTTPHeaderField: "User-Agent")
+        let (bytes, response) = try await session.bytes(for: request)
+        guard let http = response as? HTTPURLResponse,
+              http.statusCode == 200,
+              http.url == endpoint,
+              http.expectedContentLength < 0 || http.expectedContentLength <= 256 * 1_024 else {
+            throw URLError(.badServerResponse)
+        }
+        return try await BoundedResponseData.collect(bytes, maxBytes: 256 * 1_024)
+    }
+    if let notice = await checker.check(currentVersion: LocalSubVersion.current) {
+        writeStandardError(structuredOutput ? notice.progressJSON : notice.rendered)
+    }
+    session.invalidateAndCancel()
 }
 
 func locale(for language: SourceLanguage) -> Locale {
@@ -181,7 +231,32 @@ func generate(_ options: GenerateOptions) async throws {
 }
 
 func run() async throws {
-    switch try CLIParser.parse(Array(CommandLine.arguments.dropFirst())) {
+    let command = try CLIParser.parse(Array(CommandLine.arguments.dropFirst()))
+    let preferenceStore = UpdateCheckPreferenceStore()
+    switch command {
+    case .updateCheck(let action):
+        switch action {
+        case .enable:
+            try preferenceStore.setEnabled(true)
+            writeStandardOutput("更新確認を有効にしました。GitHub Releasesへ最大24時間に1回接続します。GitHubとネットワーク事業者はIP、時刻、LocalSubバージョンを観測できます。")
+        case .disable:
+            try preferenceStore.setEnabled(false)
+            writeStandardOutput("更新確認を無効にしました。")
+        case .status:
+            writeStandardOutput(preferenceStore.isEnabled() ? "enabled" : "disabled")
+        }
+        return
+    default:
+        if UpdateCheckPolicy.shouldRunAutomatically(
+            for: command,
+            preferenceEnabled: preferenceStore.isEnabled()
+        ) {
+            let structuredOutput: Bool
+            if case .generate = command { structuredOutput = true } else { structuredOutput = false }
+            await reportUpdateIfAvailable(structuredOutput: structuredOutput)
+        }
+    }
+    switch command {
     case .help:
         writeStandardOutput(CLIHelp.text)
     case .version:
@@ -190,6 +265,8 @@ func run() async throws {
         try await doctor(options)
     case .setup(let options):
         try await setup(options)
+    case .updateCheck:
+        break
     case .generate(let options):
         try await generate(options)
     }
