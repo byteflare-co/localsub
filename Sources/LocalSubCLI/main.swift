@@ -24,6 +24,18 @@ enum CLIRuntimeError: Error, LocalizedError {
     }
 }
 
+final class UpdateRedirectRejectingDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+}
+
 func writeStandardOutput(_ value: String) {
     FileHandle.standardOutput.write(Data("\(value)\n".utf8))
 }
@@ -34,6 +46,45 @@ func writeStandardError(_ value: String) {
 
 func report(_ stage: String) {
     writeStandardError("{\"stage\":\"\(stage)\"}")
+}
+
+func reportUpdateIfAvailable() async {
+    let disabled = (ProcessInfo.processInfo.environment["LOCALSUB_NO_UPDATE_CHECK"] ?? "")
+        .lowercased()
+    guard !["1", "true", "yes"].contains(disabled),
+          let endpoint = URL(string:
+            "https://api.github.com/repos/byteflare-co/localsub/releases?per_page=20"
+          ) else { return }
+
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.timeoutIntervalForRequest = 2
+    configuration.timeoutIntervalForResource = 2
+    configuration.waitsForConnectivity = false
+    let session = URLSession(
+        configuration: configuration,
+        delegate: UpdateRedirectRejectingDelegate(),
+        delegateQueue: nil
+    )
+    let checker = CLIUpdateChecker {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        request.setValue("LocalSub/\(LocalSubVersion.current)", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse,
+              http.statusCode == 200,
+              http.url == endpoint,
+              http.expectedContentLength <= 256 * 1_024,
+              data.count <= 256 * 1_024 else {
+            throw URLError(.badServerResponse)
+        }
+        return data
+    }
+    if let notice = await checker.check(currentVersion: LocalSubVersion.current) {
+        writeStandardError(notice.rendered)
+    }
+    session.invalidateAndCancel()
 }
 
 func locale(for language: SourceLanguage) -> Locale {
@@ -181,7 +232,9 @@ func generate(_ options: GenerateOptions) async throws {
 }
 
 func run() async throws {
-    switch try CLIParser.parse(Array(CommandLine.arguments.dropFirst())) {
+    let command = try CLIParser.parse(Array(CommandLine.arguments.dropFirst()))
+    await reportUpdateIfAvailable()
+    switch command {
     case .help:
         writeStandardOutput(CLIHelp.text)
     case .version:

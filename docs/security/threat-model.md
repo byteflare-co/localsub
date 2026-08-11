@@ -86,6 +86,16 @@ commands, no tools are enabled, and output remains limited to validated Japanese
 reduces impact but does not make translation semantically infallible; the review UI remains a
 required human checkpoint.
 
+### CLI update metadata
+
+The CLI may contact the fixed GitHub Releases API endpoint at startup under ADR-007. The request
+contains no user media or derived content, but GitHub and network operators can observe ordinary
+connection metadata and the LocalSub version in User-Agent. Checks are limited to once per 24
+hours, time out after two seconds, reject responses above 256 KiB, and fail silently. Release tags
+and URLs are untrusted and must pass semantic-version, draft-state, exact-host, and exact-path
+validation. The check only prints to standard error and never downloads or installs executable
+content. `LOCALSUB_NO_UPDATE_CHECK=1` disables it.
+
 ### Future FFmpeg or model dependencies
 
 Bundled native binaries and model loaders enlarge the supply-chain and parser attack surface.

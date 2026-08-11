@@ -24,6 +24,9 @@ The initial no-network decision is superseded for optional GPT-5.6 Luna translat
 the default local path. The network entitlement does not authorize background upload,
 telemetry, media transfer, or any host other than the explicitly documented provider endpoint.
 
+[ADR-007](007-cli-update-notice.md) additionally permits a bounded, metadata-only GitHub Release
+check in the CLI. It never contains media-derived content and can be disabled independently.
+
 ## Consequences
 
 - A media-framework compromise has a smaller filesystem blast radius.

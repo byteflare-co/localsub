@@ -106,6 +106,10 @@ swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
 Run `localsub doctor` before the first video. If the Speech model is missing, review the disclosure
 and run `localsub setup --language japanese --accept-model-download` to prepare it.
 
+At startup, the CLI checks GitHub Releases at most once every 24 hours and only prints a notice
+when a newer version exists. It sends no video, audio, captions, paths, or filenames and never
+installs an update automatically. Set `LOCALSUB_NO_UPDATE_CHECK=1` to disable the request.
+
 Use `--language english` for English speech. Apple Translation is the default and only uses
 already installed models. `--translation luna` explicitly selects GPT-5.6 Luna and requires an
 `OPENAI_API_KEY` injected into that process; `--glossary terms.txt` accepts up to 32 KiB of

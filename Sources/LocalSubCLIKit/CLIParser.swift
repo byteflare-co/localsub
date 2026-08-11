@@ -209,6 +209,10 @@ public enum CLIHelp {
     REQUIREMENTS
       Apple Silicon, macOS 26 or later, and an installed Apple Speech model.
       Run 'localsub doctor' before the first video.
+
+    UPDATE CHECK
+      LocalSub checks GitHub Releases at most once every 24 hours and only prints a notice.
+      Set LOCALSUB_NO_UPDATE_CHECK=1 to disable the metadata request.
     """
 }
 

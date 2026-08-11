@@ -23,6 +23,8 @@ class Localsub < Formula
     <<~EOS
       Run `localsub doctor` before processing the first video.
       Apple Speech and Translation model assets are managed separately by macOS.
+      LocalSub checks GitHub Releases at most once every 24 hours for update notices.
+      Set LOCALSUB_NO_UPDATE_CHECK=1 to disable the metadata request.
     EOS
   end
 

@@ -107,6 +107,10 @@ swift run --scratch-path /tmp/localsub-cli localsub input.mp4 \
 初回利用前に`localsub doctor`を実行してください。Speechモデルがなければ、表示内容を確認してから
 `localsub setup --language japanese --accept-model-download`で準備できます。
 
+CLIは起動時に最大24時間に1回、GitHub Releasesへ新しいバージョンを確認し、更新がある場合だけ
+標準エラーへ案内します。動画・音声・字幕・パス・ファイル名は送信せず、自動更新もしません。
+確認を無効にする場合は`LOCALSUB_NO_UPDATE_CHECK=1`を指定してください。
+
 英語音声には`--language english`を指定します。標準のApple Translationは、すでにインストール済みの
 モデルだけを使用します。`--translation luna`を指定するとGPT-5.6 Lunaを明示的に選択でき、
 そのプロセスへ`OPENAI_API_KEY`を注入する必要があります。`--glossary terms.txt`には最大32 KiBの

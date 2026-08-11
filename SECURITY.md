@@ -36,8 +36,9 @@ Repository-wide invariants:
 - Validate all decoded project data before it reaches rendering or UI state.
 - Preserve cancellation and stale-job isolation across every asynchronous boundary.
 - Do not add network providers, analytics, or diagnostic upload without an explicit ADR,
-  updated threat model, bounded egress contract, and user-visible consent. The sole current
-  exception is the optional text-only Luna path specified by ADR-006.
+  updated threat model, bounded egress contract, and user-visible consent. Content egress is
+  limited to the optional text-only Luna path specified by ADR-006. ADR-007 separately permits
+  a disclosed, opt-out, metadata-only GitHub release check with no media-derived content.
 - Publish CLI source archives only from a clean, version-tagged commit. Do not attach CLI
   executables, bottles, or Casks. Pin the custom source archive SHA-256 directly in the Formula
   and installer, require immutable release assets, and fail closed before publishing a local build.
